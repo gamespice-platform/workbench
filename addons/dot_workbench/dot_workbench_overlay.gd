@@ -1,7 +1,7 @@
-class_name DotWorkbenchOverlay
+class_name GSWorkbenchOverlay
 extends PanelContainer
 
-## The in-game workbench window: a title bar over GameSpice Menu's profile editor, bound to a [DotWorkbenchApi].
+## The in-game workbench window: a title bar over GameSpice Menu's profile editor, bound to a [GSWorkbenchApi].
 ## GameSpice UI and GameSpice Menu are loaded by path, so a build without them gets null from [method create].
 
 const EDITOR_SCRIPT := "res://addons/dot_menu/ui/dot_profile_editor_screen.gd"
@@ -9,9 +9,9 @@ const TOKENS_SCRIPT := "res://addons/dot_ui/form/dot_form_tokens.gd"
 
 signal closed
 
-var api: DotWorkbenchApi
-var panel: DotWorkbenchPanel
-var exporter: DotWorkbenchExport
+var api: GSWorkbenchApi
+var panel: GSWorkbenchPanel
+var exporter: GSWorkbenchExport
 var editor: Control = null
 var tokens: Object = null
 var last_export: Dictionary = {}
@@ -20,7 +20,7 @@ var _status: Label
 var _import_box: TextEdit
 var _drawers: ScrollContainer
 var _import_row: Control
-var wearable_form: DotWorkbenchWearableForm
+var wearable_form: GSWorkbenchWearableForm
 var _status_pill: PanelContainer
 var _wearable_card: Control
 var _labels: Dictionary = {}
@@ -35,16 +35,16 @@ var _shown: Array = []
 
 
 ## Builds the window, or null when GameSpice Menu or GameSpice UI is not linked. [param labels] is {kind: heading}; [param animate] false makes every transition instant (tests, screenshots).
-## Only sets [method DotWorkbenchScope.active] are listed, each heading with its side; [method open] re-checks them.
-static func create(p_api: DotWorkbenchApi, actor: Variant, labels: Dictionary = {}, animate := true) -> DotWorkbenchOverlay:
+## Only sets [method GSWorkbenchScope.active] are listed, each heading with its side; [method open] re-checks them.
+static func create(p_api: GSWorkbenchApi, actor: Variant, labels: Dictionary = {}, animate := true) -> GSWorkbenchOverlay:
 	if not ResourceLoader.exists(EDITOR_SCRIPT) or not ResourceLoader.exists(TOKENS_SCRIPT):
 		return null
-	var o := DotWorkbenchOverlay.new()
+	var o := GSWorkbenchOverlay.new()
 	o.api = p_api
-	o.exporter = DotWorkbenchExport.new(p_api)
-	o.panel = DotWorkbenchPanel.new(p_api, actor)
+	o.exporter = GSWorkbenchExport.new(p_api)
+	o.panel = GSWorkbenchPanel.new(p_api, actor)
 	var tk_script: GDScript = load(TOKENS_SCRIPT)
-	o.tokens = DotWorkbenchStyle.apply(tk_script.call("dark"))
+	o.tokens = GSWorkbenchStyle.apply(tk_script.call("dark"))
 	o.tokens.set("animate", animate)
 	o._labels = labels
 	o.panel.status.connect(o._say)
@@ -87,7 +87,7 @@ func _build() -> void:
 	_import_row = _build_import()
 	_import_row.visible = false
 	drawer_box.add_child(_import_row)
-	wearable_form = DotWorkbenchWearableForm.new()
+	wearable_form = GSWorkbenchWearableForm.new()
 	wearable_form.status.connect(_say)
 	_wearable_card = _card_around(wearable_form)
 	_wearable_card.visible = false
@@ -107,14 +107,14 @@ func _build() -> void:
 	refresh(true)
 
 
-## The sections listed now: [kind, heading] pairs ([method DotWorkbenchScope.sections]).
+## The sections listed now: [kind, heading] pairs ([method GSWorkbenchScope.sections]).
 func sections() -> Array:
-	return DotWorkbenchScope.sections(api, _labels)
+	return GSWorkbenchScope.sections(api, _labels)
 
 
 ## The owners (games, modes, addons) of the listed sections, in order, once each.
 func loaded_owners() -> PackedStringArray:
-	return DotWorkbenchScope.owners(api, _shown)
+	return GSWorkbenchScope.owners(api, _shown)
 
 
 ## Rebuilds the editor when what is loaded changed (a mode turned on, a pack added), or always with [param force].
@@ -160,7 +160,7 @@ func _fill_loaded() -> void:
 	_loaded_row.add_child(head)
 	for who in owners:
 		var pill := PanelContainer.new()
-		pill.add_theme_stylebox_override("panel", DotWorkbenchStyle.pill(tokens.get("accent"), 0.12))
+		pill.add_theme_stylebox_override("panel", GSWorkbenchStyle.pill(tokens.get("accent"), 0.12))
 		var l := Label.new()
 		l.text = who
 		l.theme_type_variation = &"WbStatus"
@@ -213,21 +213,21 @@ func _extra_theme() -> void:
 
 func _card_around(inner: Control) -> Control:
 	var pc := PanelContainer.new()
-	pc.add_theme_stylebox_override("panel", DotWorkbenchStyle.card(tokens, false, 18))
+	pc.add_theme_stylebox_override("panel", GSWorkbenchStyle.card(tokens, false, 18))
 	pc.add_child(inner)
 	return pc
 
 
 func _bar() -> Control:
 	var wrap := PanelContainer.new()
-	var sb := DotWorkbenchStyle.card(tokens, true, 14)
+	var sb := GSWorkbenchStyle.card(tokens, true, 14)
 	sb.content_margin_left = 20
 	sb.content_margin_right = 14
 	wrap.add_theme_stylebox_override("panel", sb)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	wrap.add_child(row)
-	row.add_child(DotWorkbenchStyle.badge("W", 42))
+	row.add_child(GSWorkbenchStyle.badge("W", 42))
 	var names := VBoxContainer.new()
 	names.add_theme_constant_override("separation", -2)
 	names.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -281,7 +281,7 @@ func _chip(text: String, cb: Callable, tip: String) -> Button:
 
 func _lift(b: Button) -> void:
 	if bool(tokens.get("animate")):
-		DotWorkbenchStyle.lift(b)
+		GSWorkbenchStyle.lift(b)
 
 
 ## The empty state: nothing tunable is loaded yet, so say what to do instead of showing a blank editor.
@@ -357,7 +357,7 @@ func _say(text: String, bad: bool) -> void:
 	_status.text = text
 	var c: Color = tokens.get("danger") if bad else tokens.get("good")
 	_status.add_theme_color_override("font_color", c)
-	_status_pill.add_theme_stylebox_override("panel", DotWorkbenchStyle.pill(c))
+	_status_pill.add_theme_stylebox_override("panel", GSWorkbenchStyle.pill(c))
 	_status_pill.visible = not text.is_empty()
 	# A message left up for good reads as current long after it stopped being true, so it fades after a while.
 	if _status_timer != null and _status_timer.timeout.is_connected(_clear_status):

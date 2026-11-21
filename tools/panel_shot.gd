@@ -16,23 +16,23 @@ func _run() -> void:
 		var f := FileAccess.open(BASE.path_join("addons/dot-npc/npc/%s.yml" % n), FileAccess.WRITE)
 		f.store_string("health: 50\nspeed: 2.5\n")
 		f.close()
-	var s := DotProfileSet.create("dot-npc", "mygame", "npc", [
-		DotProfileSet.field("health", "int", 100, {"min": 1, "max": 1000}),
-		DotProfileSet.field("speed", "float", 3.0, {"min": 0.0, "max": 50.0}),
-		DotProfileSet.field("mode", "string", "melee", {"enum": ["melee", "ranged"]}),
-		DotProfileSet.field("aggressive", "bool", true),
+	var s := GSProfileSet.create("dot-npc", "mygame", "npc", [
+		GSProfileSet.field("health", "int", 100, {"min": 1, "max": 1000}),
+		GSProfileSet.field("speed", "float", 3.0, {"min": 0.0, "max": 50.0}),
+		GSProfileSet.field("mode", "string", "melee", {"enum": ["melee", "ranged"]}),
+		GSProfileSet.field("aggressive", "bool", true),
 	])
 	s.roots = PackedStringArray([BASE])
 	s.override_prefix = "wbs"
-	var api := DotWorkbenchApi.new()
+	var api := GSWorkbenchApi.new()
 	api.runtime.save_root = BASE
 	api.add_set(s)
 	root.get_window().size = Vector2i(1280, 800)
 	await _frames(3)
 	api.permit = func(actor: Variant, _f: String) -> bool: return actor == "admin"
-	var ov := DotWorkbenchOverlay.create(api, "admin", {"npc": "NPCs"})
+	var ov := GSWorkbenchOverlay.create(api, "admin", {"npc": "NPCs"})
 	root.add_child(ov)
-	var ed: DotProfileEditorScreen = ov.editor
+	var ed: GSProfileEditorScreen = ov.editor
 	await _frames(3)
 	var _o := ed.open("npc", "zombie")
 	await _frames(2)

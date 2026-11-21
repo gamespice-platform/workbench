@@ -1,9 +1,9 @@
-class_name DotWorkbenchScope
+class_name GSWorkbenchScope
 extends RefCounted
 
 ## Who a profile set belongs to and where it lives, so the overlay lists only what is loaded and says which side each section edits.
 ## The scope rides on the set as metadata, so a host that only passes `(set, label)` keeps working; an untagged set is always shown.
-## Use: [code]DotWorkbenchScope.tag(set, {"owner": "my-game", "side": DotWorkbenchScope.SIDE_SERVER, "requires": func(): return mode_on})[/code].
+## Use: [code]GSWorkbenchScope.tag(set, {"owner": "my-game", "side": GSWorkbenchScope.SIDE_SERVER, "requires": func(): return mode_on})[/code].
 
 const META := &"dot_workbench_scope"
 ## Lives on the server only; a client edits it through the server.
@@ -71,7 +71,7 @@ static func heading(set: Object, label: String) -> String:
 
 ## The sections an overlay over [param api] lists now: [kind, heading] for every active set, in the order added;
 ## [param labels] is {kind: label}, a kind without one is capitalised.
-static func sections(api: DotWorkbenchApi, labels: Dictionary = {}) -> Array:
+static func sections(api: GSWorkbenchApi, labels: Dictionary = {}) -> Array:
 	var out: Array = []
 	for kind: String in api.all_kinds():
 		var set := api.get_set(kind)
@@ -81,7 +81,7 @@ static func sections(api: DotWorkbenchApi, labels: Dictionary = {}) -> Array:
 
 
 ## The owners of [param listed] ([method sections]' pairs), in order, once each: what is loaded.
-static func owners(api: DotWorkbenchApi, listed: Array) -> PackedStringArray:
+static func owners(api: GSWorkbenchApi, listed: Array) -> PackedStringArray:
 	var out := PackedStringArray()
 	for pair: Array in listed:
 		var who := owner_of(api.get_set(pair[0]))

@@ -1,6 +1,6 @@
 [![Workbench - GameSpice addon](docs/banner.png)](https://moddingcommunity.com/a/109-gs-workbench)
 
-Live-edit profiles on a running game. A JSON API over `DotProfileRuntime`, an in-game window, and an off-by-default loopback web page. Tune values while playing, then export only what you changed.
+Live-edit profiles on a running game. A JSON API over `GSProfileRuntime`, an in-game window, and an off-by-default loopback web page. Tune values while playing, then export only what you changed.
 
 ## What it looks like
 
@@ -48,7 +48,7 @@ workbench:
   token_file: /etc/dot/workbench.token
 ```
 
-The host creates `DotWorkbenchHttp.new(api)`, calls `start_from_config(DotWorkbenchHttp.read_config())` and calls `poll()` from `_process`. All routes except the page need `Authorization: Bearer <token>`.
+The host creates `GSWorkbenchHttp.new(api)`, calls `start_from_config(GSWorkbenchHttp.read_config())` and calls `poll()` from `_process`. All routes except the page need `Authorization: Bearer <token>`.
 
 | Route | Does |
 | --- | --- |
@@ -71,16 +71,16 @@ To try somebody else's tuning, press **Import** and paste the text, or give the 
 
 | Class | Role |
 | --- | --- |
-| `DotWorkbenchExport` | Behind both buttons: `collect()`, `export_changes()`, `import_source(actor, source)`. |
-| `DotWorkbenchOverlay` | The window. |
-| `DotWorkbenchScope` | Tags a set with owner, side, `requires` and `listed`, so the window only lists what is loaded. |
-| `DotWorkbenchSetView` | One heading per member of a grouped set, such as one per weapon pack. |
+| `GSWorkbenchExport` | Behind both buttons: `collect()`, `export_changes()`, `import_source(actor, source)`. |
+| `GSWorkbenchOverlay` | The window. |
+| `GSWorkbenchScope` | Tags a set with owner, side, `requires` and `listed`, so the window only lists what is loaded. |
+| `GSWorkbenchSetView` | One heading per member of a grouped set, such as one per weapon pack. |
 
-A game hosts the window with GameSpice Game's `DotGameWorkbench` (see GameSpice Game's `docs/workbench.md`).
+A game hosts the window with GameSpice Game's `GSGameWorkbench` (see GameSpice Game's `docs/workbench.md`).
 
 ## Identity
 
-`DotWorkbenchIdentity` is an admin-only gate for `api.identity`, a thin subclass of GameSpice Core's `DotAdminIdentity`. Nothing is imported: the host gives it a `resolver` Callable(token) returning a `DotAuthIdentity` or a Dictionary with `uid`, and optionally a `fallback_permit` Callable(uid, flag) backed by an admin manager. Access is denied by default: only `admin_uids` and members of `admin_groups` get in. Actors are logged as `id:<uid>`, and tokens are never logged. `gate.attach(api)` installs it, and the admin token keeps working beside it.
+`GSWorkbenchIdentity` is an admin-only gate for `api.identity`, a thin subclass of GameSpice Core's `GSAdminIdentity`. Nothing is imported: the host gives it a `resolver` Callable(token) returning a `GSAuthIdentity` or a Dictionary with `uid`, and optionally a `fallback_permit` Callable(uid, flag) backed by an admin manager. Access is denied by default: only `admin_uids` and members of `admin_groups` get in. Actors are logged as `id:<uid>`, and tokens are never logged. `gate.attach(api)` installs it, and the admin token keeps working beside it.
 
 ## Testing
 

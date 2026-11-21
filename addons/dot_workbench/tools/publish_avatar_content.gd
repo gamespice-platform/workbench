@@ -28,7 +28,7 @@ func _main() -> void:
 				"--file": file = args[i + 1]
 			i += 2
 			continue
-		if a.begins_with("--") and DotWorkbenchPublish.FIELDS.has(a.substr(2)) and i + 1 < args.size():
+		if a.begins_with("--") and GSWorkbenchPublish.FIELDS.has(a.substr(2)) and i + 1 < args.size():
 			params[a.substr(2)] = args[i + 1]
 			i += 2
 			continue
@@ -44,11 +44,11 @@ func _main() -> void:
 		quit(2)
 		return
 
-	var site_ok := DotWorkbenchPublish.check_site(site)
+	var site_ok := GSWorkbenchPublish.check_site(site)
 	if not site_ok.ok:
 		_fail(site_ok)
 		return
-	var token := DotWorkbenchPublish.read_token(token_file)
+	var token := GSWorkbenchPublish.read_token(token_file)
 	if not token.ok:
 		_fail(token)
 		return
@@ -57,12 +57,12 @@ func _main() -> void:
 		quit(1)
 		return
 	var bytes := FileAccess.get_file_as_bytes(file)
-	var http := DotHttp.new()
+	var http := GSHttp.new()
 	http.base_url = site_ok.value
 	http.max_retries = 0
 	http.timeout_sec = 120.0
 	root.add_child(http)
-	var res := await DotWorkbenchPublish.new().publish(http, token.value, bytes, params)
+	var res := await GSWorkbenchPublish.new().publish(http, token.value, bytes, params)
 	http.queue_free()
 	if not res.ok:
 		_fail(res)
@@ -71,7 +71,7 @@ func _main() -> void:
 	quit(0)
 
 
-func _fail(res: DotResult) -> void:
+func _fail(res: GSResult) -> void:
 	printerr("publish failed: %s %s" % [res.error.message, res.error.detail])
 	quit(1)
 

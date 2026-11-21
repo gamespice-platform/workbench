@@ -1,7 +1,7 @@
-class_name DotWorkbenchSpawnEditor
+class_name GSWorkbenchSpawnEditor
 extends Node3D
 
-## Point-and-click spawn authoring: aim, click to add, select, move, turn, edit, delete. Every edit goes through [DotWorkbenchApi] into the `spawn` profile of [member map_id] and is saved at once.
+## Point-and-click spawn authoring: aim, click to add, select, move, turn, edit, delete. Every edit goes through [GSWorkbenchApi] into the `spawn` profile of [member map_id] and is saved at once.
 ##
 ## Duck-typed to dot-spawn: points are plain Dictionaries in the override entry format (pos, yaw, team, kind, enabled, weight, tags).
 
@@ -14,7 +14,7 @@ const MAX_TEAMS := 8
 signal changed(id: String)
 signal selected_changed(id: String)
 
-var api: DotWorkbenchApi
+var api: GSWorkbenchApi
 var actor: Variant
 var map_id := ""
 ## (from: Vector3, dir: Vector3) -> Dictionary {position, normal} or {}; the game supplies its physics ray.
@@ -211,9 +211,9 @@ func _key(code: Key) -> void:
 					move_point(selected, r["position"])
 
 
-func _write(id: String, entry: Dictionary) -> DotResult:
+func _write(id: String, entry: Dictionary) -> GSResult:
 	if api == null:
-		return DotResult.fail(DotError.CODE_INVALID, "no api")
+		return GSResult.fail(GSError.CODE_INVALID, "no api")
 	var listed := api.handle(actor, {"op": "list", "kind": KIND})
 	if not listed.ok:
 		return listed

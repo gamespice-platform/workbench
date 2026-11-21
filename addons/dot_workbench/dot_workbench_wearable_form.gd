@@ -1,8 +1,8 @@
-class_name DotWorkbenchWearableForm
+class_name GSWorkbenchWearableForm
 extends VBoxContainer
 
 ## The workbench's "Make wearable" form: a GLB, a name, a slot and a licence, published to the site
-## with a creator token read from a file. [DotWorkbenchPublish] does the checks and the upload.
+## with a creator token read from a file. [GSWorkbenchPublish] does the checks and the upload.
 
 signal status(text: String, bad: bool)
 
@@ -10,7 +10,7 @@ signal status(text: String, bad: bool)
 var token_path := "user://creator_token"
 ## The site's base url; empty until the host or the user fills it.
 var site_url := ""
-## A [DotHttp]-shaped node for tests; null builds a real one per upload.
+## A [GSHttp]-shaped node for tests; null builds a real one per upload.
 var http: Node = null
 
 var _file: LineEdit
@@ -32,8 +32,8 @@ func _init() -> void:
 	add_child(head)
 	_file = _row("GLB file", "path to a .glb, origin at the attachment point")
 	_name = _row("Name", "")
-	_slot = _options("Slot", DotWorkbenchPublish.SLOTS)
-	_licence = _options("Licence", DotWorkbenchPublish.LICENCES)
+	_slot = _options("Slot", GSWorkbenchPublish.SLOTS)
+	_licence = _options("Licence", GSWorkbenchPublish.LICENCES)
 	_credit = _row("Credit", "required unless CC0-1.0")
 	_site = _row("Site", "https://...")
 	_token = _row("Token file", "")
@@ -64,9 +64,9 @@ func set_values(file: String, wearable_name: String, slot: String, licence: Stri
 
 
 ## Reads, checks and uploads. Succeeds with the site's reply; reports on [signal status] either way.
-func submit() -> DotResult:
+func submit() -> GSResult:
 	if _busy:
-		return DotResult.fail(DotError.CODE_STATE, "an upload is already running")
+		return GSResult.fail(GSError.CODE_STATE, "an upload is already running")
 	_busy = true
 	_go.disabled = true
 	var res := await _submit()
@@ -79,27 +79,27 @@ func submit() -> DotResult:
 	return res
 
 
-func _submit() -> DotResult:
+func _submit() -> GSResult:
 	var path := _file.text.strip_edges()
 	if not FileAccess.file_exists(path):
-		return DotResult.fail(DotError.CODE_IO, "no such file", path)
-	var token := DotWorkbenchPublish.read_token(_token.text.strip_edges())
+		return GSResult.fail(GSError.CODE_IO, "no such file", path)
+	var token := GSWorkbenchPublish.read_token(_token.text.strip_edges())
 	if not token.ok:
 		return token
 	var bytes := FileAccess.get_file_as_bytes(path)
 	var own := http == null
 	var client: Node = http
 	if own:
-		var site := DotWorkbenchPublish.check_site(_site.text)
+		var site := GSWorkbenchPublish.check_site(_site.text)
 		if not site.ok:
 			return site
-		var real := DotHttp.new()
+		var real := GSHttp.new()
 		real.base_url = site.value
 		real.max_retries = 0
 		real.timeout_sec = 120.0
 		add_child(real)
 		client = real
-	var res: DotResult = await DotWorkbenchPublish.new().publish(client, token.value, bytes, params())
+	var res: GSResult = await GSWorkbenchPublish.new().publish(client, token.value, bytes, params())
 	if own:
 		client.queue_free()
 	return res

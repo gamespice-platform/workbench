@@ -1,19 +1,19 @@
 # GameSpice Workbench design
 
-GameSpice Workbench is the admin live-edit surface on top of `DotProfileRuntime` (GameSpice Core, `docs/profiles.md`). It owns no profile logic: validation, revisions, replication, audit and the save-to-server-tier all stay in the runtime. The workbench moves dictionaries to it and back, and (later) hosts a page and an HTTP endpoint.
+GameSpice Workbench is the admin live-edit surface on top of `GSProfileRuntime` (GameSpice Core, `docs/profiles.md`). It owns no profile logic: validation, revisions, replication, audit and the save-to-server-tier all stay in the runtime. The workbench moves dictionaries to it and back, and (later) hosts a page and an HTTP endpoint.
 
 ## What already exists (investigated 2026-10-22)
 
-- **No HTTP server exists in the family.** GameSpice Server's `DotRconServer` is Source-style RCON over TCP plus a WebSocket listener (the WebSocket handshake is `WebSocketPeer.accept_stream()`, not a request/response server). GameSpice Server Query's `DotQueryServer` is UDP (DQP/A2S) with a TCP side for DQP. GameSpice Net has transports and replication, no HTTP. GameSpice Core's `DotHttp` is a client. `gs-serve` is a Python tool, not an in-game server.
-- So the HTTP adapter cannot be hosted by an existing server and is not written here. Writing a second one-off server inside this addon was refused; the owner is the shared `DotHttpServer` in GameSpice Core's `net/` (built 2026-10-22) (built on `TCPServer`, `TLSOptions` for native TLS), which GameSpice Workbench and anything else would use. That is filed as a follow-up on the board.
-- What the runtime exposes: `handle_request(actor, req)` for `set`, `reset_key`, `reset`, `save`, returning a `DotResult` whose value is the changed row; `permit(actor, flag)` with `edit_flag` `cvar` and `save_flag` `root`; `revision(kind, id)`; `profile_changed` signal; INFO audit line per edit. It has no list or get; `DotProfileSet` supplies `list_ids`, `has_id`, `load_profile` and `runtime_paths`, which `DotWorkbenchApi` uses.
+- **No HTTP server exists in the family.** GameSpice Server's `GSRconServer` is Source-style RCON over TCP plus a WebSocket listener (the WebSocket handshake is `WebSocketPeer.accept_stream()`, not a request/response server). GameSpice Server Query's `GSQueryServer` is UDP (DQP/A2S) with a TCP side for DQP. GameSpice Net has transports and replication, no HTTP. GameSpice Core's `GSHttp` is a client. `gs-serve` is a Python tool, not an in-game server.
+- So the HTTP adapter cannot be hosted by an existing server and is not written here. Writing a second one-off server inside this addon was refused; the owner is the shared `GSHttpServer` in GameSpice Core's `net/` (built 2026-10-22) (built on `TCPServer`, `TLSOptions` for native TLS), which GameSpice Workbench and anything else would use. That is filed as a follow-up on the board.
+- What the runtime exposes: `handle_request(actor, req)` for `set`, `reset_key`, `reset`, `save`, returning a `GSResult` whose value is the changed row; `permit(actor, flag)` with `edit_flag` `cvar` and `save_flag` `root`; `revision(kind, id)`; `profile_changed` signal; INFO audit line per edit. It has no list or get; `GSProfileSet` supplies `list_ids`, `has_id`, `load_profile` and `runtime_paths`, which `GSWorkbenchApi` uses.
 
 ## Layers
 
-1. **`DotWorkbenchApi`** (done): transport-agnostic. `handle(actor, req) -> DotResult`, `handle_json(token, text) -> String`, `authenticate(token)`, `to_reply(res)`.
-2. **HTTP adapter** (`DotWorkbenchHttp`, done, on GameSpice Core's `DotHttpServer`): also REST routes under `/api/profiles`; maps `POST /api` (JSON body, `Authorization: Bearer <token>`) to `handle_json`, and `GET /` to the static page. Needs the shared `DotHttpServer` above.
+1. **`GSWorkbenchApi`** (done): transport-agnostic. `handle(actor, req) -> GSResult`, `handle_json(token, text) -> String`, `authenticate(token)`, `to_reply(res)`.
+2. **HTTP adapter** (`GSWorkbenchHttp`, done, on GameSpice Core's `GSHttpServer`): also REST routes under `/api/profiles`; maps `POST /api` (JSON body, `Authorization: Bearer <token>`) to `handle_json`, and `GET /` to the static page. Needs the shared `GSHttpServer` above.
 3. **Static page** (`web/index.html`, done): one `index.html`, hand-written CSS and plain JavaScript, no build step, no framework, no CDN, shipped inside the addon and served from memory. Modern look: system font stack, light and dark by `prefers-color-scheme`, a kind and profile picker, a table of fields with the effective value, the runtime override highlighted, inline edit with the server's validation error shown beside the field, per-field reset, a Save button that asks for confirmation.
-4. **In-game panel** (done): `DotWorkbenchPanel` binds GameSpice Menu's `DotProfileEditorScreen` (a `DotUiForm` inside) to `DotWorkbenchApi` through the screen's save, reset and has-override hooks, so Apply writes the live runtime layer as the given actor and `save_to_server()` writes cfg/server. A multi-key Apply that fails midway restores the earlier keys. Screenshot: `docs/workbench-ingame-dark.png`.
+4. **In-game panel** (done): `GSWorkbenchPanel` binds GameSpice Menu's `GSProfileEditorScreen` (a `GSUiForm` inside) to `GSWorkbenchApi` through the screen's save, reset and has-override hooks, so Apply writes the live runtime layer as the given actor and `save_to_server()` writes cfg/server. A multi-key Apply that fails midway restores the earlier keys. Screenshot: `docs/workbench-ingame-dark.png`.
 
 ## JSON API
 
@@ -30,12 +30,12 @@ One request object in, one reply out. Request: `{"op", "kind", "id", "key", "val
 | `save` | `root` | `{saved: path}` |
 | `changes` | `cvar` | `{profiles: [{kind, id, changes: [{path, before, now}]}]}`: this session's edits that differ from the shipped value; `kind` and `id` optional filters |
 
-Reply: `{"ok": true, "value": ...}` or `{"ok": false, "error": {"code", "message"}}` where `code` is a `DotError.CODE_*` (`forbidden`, `invalid`, ...). Clients branch on `code`. Later ops (map cycle, waves, soak report) are new `op` names on the same envelope.
+Reply: `{"ok": true, "value": ...}` or `{"ok": false, "error": {"code", "message"}}` where `code` is a `GSError.CODE_*` (`forbidden`, `invalid`, ...). Clients branch on `code`. Later ops (map cycle, waves, soak report) are new `op` names on the same envelope.
 
 ## Permission and auth
 
-- Edits use the console's own path: `DotProfileRuntime.permit(actor, flag)`, `cvar` to edit and reset, `root` to save. `DotWorkbenchApi.permit` is where the host assigns its `DotAdminManager` check (duck-typed).
-- Two ways to get an actor. **Admin token**: a long random string the operator puts in a secrets file (read file-only; never environment or argv, as `DotConfig.sensitive_keys`). It maps to one actor, `TOKEN_ACTOR`, which holds `token_flags` (default `cvar` and `root`). Comparison is constant time. **Identity**: assign `identity` a Callable(token) -> actor, which the host backs with GameSpice Auth; the actor then goes through the normal flag check.
+- Edits use the console's own path: `GSProfileRuntime.permit(actor, flag)`, `cvar` to edit and reset, `root` to save. `GSWorkbenchApi.permit` is where the host assigns its `GSAdminManager` check (duck-typed).
+- Two ways to get an actor. **Admin token**: a long random string the operator puts in a secrets file (read file-only; never environment or argv, as `GSConfig.sensitive_keys`). It maps to one actor, `TOKEN_ACTOR`, which holds `token_flags` (default `cvar` and `root`). Comparison is constant time. **Identity**: assign `identity` a Callable(token) -> actor, which the host backs with GameSpice Auth; the actor then goes through the normal flag check.
 - No configured token and no identity means everything is refused. Refusals log WARN on channel `workbench`.
 
 ## Configuration: `cfg/server.yml`
@@ -59,14 +59,14 @@ Layering is the family's: defaults < file < environment < command line, except t
 
 ## Dependencies
 
-GameSpice Core only. GameSpice Server (admin flags), GameSpice Auth (identity), GameSpice UI and GameSpice Menu (the in-game panel) are reached through Callables and `DotRegistry`, never imported.
+GameSpice Core only. GameSpice Server (admin flags), GameSpice Auth (identity), GameSpice UI and GameSpice Menu (the in-game panel) are reached through Callables and `GSRegistry`, never imported.
 
 ## Not done
 
-wiring `DotWorkbenchPanel` into a game's admin menu (game-playlot has its own panel), a Save-to-server button in the screen. Identity wiring is `DotWorkbenchIdentity`; CI is `.github/workflows`.
+wiring `GSWorkbenchPanel` into a game's admin menu (game-playlot has its own panel), a Save-to-server button in the screen. Identity wiring is `GSWorkbenchIdentity`; CI is `.github/workflows`.
 
 ## Hosting it in a game and exporting it
 
-- The host builds `DotWorkbenchApi` over its `DotProfileRuntime`, adds its `DotProfileSet`s, wraps it in `DotWorkbenchHttp`, calls `start_from_config(DotWorkbenchHttp.read_config())` once the console's permit is set, `poll()` from `_process`, and `stop()` on unload. game-playlot's `game/playlot_workbench.gd` is the reference host. Without a `workbench:` block, or with `enabled: false`, nothing is opened.
+- The host builds `GSWorkbenchApi` over its `GSProfileRuntime`, adds its `GSProfileSet`s, wraps it in `GSWorkbenchHttp`, calls `start_from_config(GSWorkbenchHttp.read_config())` once the console's permit is set, `poll()` from `_process`, and `stop()` on unload. game-playlot's `game/playlot_workbench.gd` is the reference host. Without a `workbench:` block, or with `enabled: false`, nothing is opened.
 - **An export must include `*.html`.** The page is `addons/dot_workbench/web/index.html`, a plain file, and Godot's exporter drops files it does not import unless the preset's `include_filter` names them. Without it the server starts and `GET /` answers an empty page, with no error. Add `*.html` to the include filter of every preset that ships a host (a server preset; web builds are clients and never host it). Verified 2026-10-22 with `--export-pack` on this repository: the pack lacks `web/index.html` with an empty filter and holds it with `*.html`.
 - Set `page_path` to a file the host ships itself if it wants another page; it is read once at start.

@@ -1,4 +1,4 @@
-class_name DotWorkbenchExport
+class_name GSWorkbenchExport
 extends RefCounted
 
 ## "Export changes as defaults" and "Import": the tuning round trip.
@@ -10,7 +10,7 @@ const ROOT := "user://workbench-export"
 const BUNDLE_MARK := "# ---- file: "
 const README_NAME := "README.txt"
 
-var api: DotWorkbenchApi
+var api: GSWorkbenchApi
 ## Optional Callable() -> {cvar name: value} of cvars changed from their shipped default, written to
 ## `game-cvars.yml` for pasting into the game's `game.yml` `cvars:` block.
 var cvars_provider: Callable = Callable()
@@ -18,7 +18,7 @@ var cvars_provider: Callable = Callable()
 var root := ROOT
 
 
-func _init(p_api: DotWorkbenchApi) -> void:
+func _init(p_api: GSWorkbenchApi) -> void:
 	api = p_api
 
 
@@ -26,7 +26,7 @@ func _init(p_api: DotWorkbenchApi) -> void:
 func collect() -> Dictionary:
 	var files := {}
 	for kind in api.kinds():
-		var set: DotProfileSet = api.get_set(kind)
+		var set: GSProfileSet = api.get_set(kind)
 		for id in set.runtime.keys():
 			var tree := {}
 			var paths: Dictionary = set.runtime_paths(id)
@@ -39,7 +39,7 @@ func collect() -> Dictionary:
 				continue
 			var text: Variant = _emit(tree, 0)
 			if text == null:
-				DotLog.warn(CHANNEL, "export skipped a profile with an unwritable value", {"kind": kind, "id": id})
+				GSLog.warn(CHANNEL, "export skipped a profile with an unwritable value", {"kind": kind, "id": id})
 				continue
 			files[_file_for(set, id)] = text
 	if cvars_provider.is_valid():
@@ -53,32 +53,32 @@ func collect() -> Dictionary:
 
 
 ## Writes the diff under `<root>/<timestamp>/` plus a zip beside it. Value: {dir, zip, files: [...], bundle}.
-func export_changes(stamp: String = "") -> DotResult:
+func export_changes(stamp: String = "") -> GSResult:
 	var files := collect()
 	if files.is_empty():
-		return DotResult.fail(DotError.CODE_STATE, "no changes differ from the shipped defaults")
+		return GSResult.fail(GSError.CODE_STATE, "no changes differ from the shipped defaults")
 	if stamp.is_empty():
 		stamp = Time.get_datetime_string_from_system().replace(":", "-").replace("T", "_")
 	var dir := root.path_join(stamp)
 	files[README_NAME] = _readme(files.keys())
 	for rel in files:
-		var wrote := DotPaths.write_text(dir.path_join(rel), files[rel])
+		var wrote := GSPaths.write_text(dir.path_join(rel), files[rel])
 		if not wrote.ok:
 			return wrote.wrap("exporting %s" % rel)
 	var zip_path := dir + ".zip"
 	var zipper := ZIPPacker.new()
 	if zipper.open(zip_path) != OK:
-		return DotResult.fail(DotError.CODE_IO, "cannot write %s" % zip_path)
+		return GSResult.fail(GSError.CODE_IO, "cannot write %s" % zip_path)
 	for rel in files:
 		var _s := zipper.start_file(rel)
 		var _w := zipper.write_file((files[rel] as String).to_utf8_buffer())
 		var _c := zipper.close_file()
 	var _z := zipper.close()
-	DotWeb.sync_filesystem()
-	DotLog.info(CHANNEL, "workbench changes exported", {"dir": dir, "files": files.size()})
+	GSWeb.sync_filesystem()
+	GSLog.info(CHANNEL, "workbench changes exported", {"dir": dir, "files": files.size()})
 	var names: Array = files.keys()
 	names.sort()
-	return DotResult.success({"dir": dir, "zip": zip_path, "files": names, "bundle": bundle(files)})
+	return GSResult.success({"dir": dir, "zip": zip_path, "files": names, "bundle": bundle(files)})
 
 
 ## One text for the clipboard: every file behind a `# ---- file: <path>` line.
@@ -116,29 +116,29 @@ static func parse_bundle(text: String) -> Dictionary:
 
 
 ## {relative path: text} read from an export folder or zip; unreadable pieces are skipped.
-static func read_package(path: String) -> DotResult:
+static func read_package(path: String) -> GSResult:
 	var files := {}
 	if path.to_lower().ends_with(".zip"):
 		var reader := ZIPReader.new()
 		if reader.open(path) != OK:
-			return DotResult.fail(DotError.CODE_IO, "cannot open %s" % path)
+			return GSResult.fail(GSError.CODE_IO, "cannot open %s" % path)
 		for rel in reader.get_files():
 			if not rel.ends_with("/"):
 				files[rel] = reader.read_file(rel).get_string_from_utf8()
 		reader.close()
-		return DotResult.success(files)
-	for rel in DotPaths.list_files_recursive(path):
+		return GSResult.success(files)
+	for rel in GSPaths.list_files_recursive(path):
 		if not rel.ends_with(".yml") and not rel.ends_with(".txt"):
 			continue
-		var text := DotPaths.read_text(path.path_join(rel))
+		var text := GSPaths.read_text(path.path_join(rel))
 		if text.ok:
 			files[rel] = text.value
-	return DotResult.success(files)
+	return GSResult.success(files)
 
 
 ## Applies files (as from [method read_package] or [method parse_bundle]) to the api as [param actor].
 ## Value: {applied: n, skipped: [reasons]}. A file for a profile this game does not have is skipped, not an error.
-func import_files(actor: Variant, files: Dictionary) -> DotResult:
+func import_files(actor: Variant, files: Dictionary) -> GSResult:
 	var applied := 0
 	var skipped: Array = []
 	var names: Array = files.keys()
@@ -152,26 +152,26 @@ func import_files(actor: Variant, files: Dictionary) -> DotResult:
 		if target.is_empty():
 			skipped.append("%s: not a profile file under cfg/game or cfg/addons" % rel)
 			continue
-		var parsed := DotYaml.parse(files[rel], String(rel))
+		var parsed := GSYaml.parse(files[rel], String(rel))
 		if not parsed.ok:
 			return parsed.wrap("importing %s" % rel)
 		var leaves := {}
 		_flatten(parsed.value if parsed.value is Dictionary else {}, "", leaves)
-		leaves.erase(DotProfileSet.EXTENDS_KEY)
+		leaves.erase(GSProfileSet.EXTENDS_KEY)
 		for path in leaves:
 			var res := api.handle(actor, {"op": "set", "kind": target["kind"], "id": target["id"], "key": path, "value": leaves[path]})
 			if not res.ok:
-				if res.error.code == DotError.CODE_FORBIDDEN:
+				if res.error.code == GSError.CODE_FORBIDDEN:
 					return res
 				skipped.append("%s: %s: %s" % [rel, path, res.error.message])
 			else:
 				applied += 1
-	DotLog.info(CHANNEL, "workbench defaults imported", {"applied": applied, "skipped": skipped.size()})
-	return DotResult.success({"applied": applied, "skipped": skipped})
+	GSLog.info(CHANNEL, "workbench defaults imported", {"applied": applied, "skipped": skipped.size()})
+	return GSResult.success({"applied": applied, "skipped": skipped})
 
 
 ## Imports an export folder, zip or pasted bundle text, whichever [param source] is.
-func import_source(actor: Variant, source: String) -> DotResult:
+func import_source(actor: Variant, source: String) -> GSResult:
 	var files: Dictionary
 	var s := source.strip_edges()
 	if s.contains("\n") or s.begins_with("#"):
@@ -182,13 +182,13 @@ func import_source(actor: Variant, source: String) -> DotResult:
 			return read
 		files = read.value
 	if files.is_empty():
-		return DotResult.fail(DotError.CODE_INVALID, "nothing to import")
+		return GSResult.fail(GSError.CODE_INVALID, "nothing to import")
 	return import_files(actor, files)
 
 
-func _file_for(set: DotProfileSet, id: String) -> String:
+func _file_for(set: GSProfileSet, id: String) -> String:
 	var tier := "cfg/game/%s" % set.game if set.game != "" else "cfg/addons/%s" % set.addon_name
-	return "%s/%s/%s.%s" % [tier, set.rel_path, id, DotProfileSet.EXTENSION]
+	return "%s/%s/%s.%s" % [tier, set.rel_path, id, GSProfileSet.EXTENSION]
 
 
 ## {kind, id} for a file path, matched against the registered sets; empty when none fits.
@@ -199,7 +199,7 @@ func _target_of(rel: String) -> Dictionary:
 	var owner := parts[2]
 	var id := parts[parts.size() - 1]
 	var kind := "/".join(parts.slice(3, parts.size() - 1))
-	var set: DotProfileSet = api.get_set(kind)
+	var set: GSProfileSet = api.get_set(kind)
 	if set == null:
 		return {}
 	var own := set.game if parts[1] == "game" else set.addon_name

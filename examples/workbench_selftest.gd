@@ -1,6 +1,6 @@
 extends Node
 
-## Exercises [DotWorkbenchApi] and its HTTP adapter: list, get, set, reset, save, permission refusal and bad input.
+## Exercises [GSWorkbenchApi] and its HTTP adapter: list, get, set, reset, save, permission refusal and bad input.
 ## Run: godot --headless --path . res://examples/workbench_selftest.tscn
 
 const SECTIONS := 20
@@ -14,7 +14,7 @@ var _section_count := 0
 
 
 func _ready() -> void:
-	DotLog.set_level(DotLog.Level.FATAL)
+	GSLog.set_level(GSLog.Level.FATAL)
 	_line("dot-workbench self-test")
 	_clean()
 	_test_read()
@@ -46,18 +46,18 @@ func _ready() -> void:
 	get_tree().quit(1 if _failed > 0 else 0)
 
 
-func _api() -> DotWorkbenchApi:
+func _api() -> GSWorkbenchApi:
 	_clean()
 	_w("addons/dot-npc/npc/zombie.yml", "health: 50\nspeed: 2.5\n")
 	_w("addons/dot-npc/npc/ghoul.yml", "health: 20\n")
-	var s := DotProfileSet.create("dot-npc", "mygame", "npc", [
-		DotProfileSet.field("health", "int", 100, {"min": 1, "max": 1000}),
-		DotProfileSet.field("speed", "float", 3.0, {"min": 0.0, "max": 50.0}),
-		DotProfileSet.field("mode", "string", "melee", {"enum": ["melee", "ranged"]}),
+	var s := GSProfileSet.create("dot-npc", "mygame", "npc", [
+		GSProfileSet.field("health", "int", 100, {"min": 1, "max": 1000}),
+		GSProfileSet.field("speed", "float", 3.0, {"min": 0.0, "max": 50.0}),
+		GSProfileSet.field("mode", "string", "melee", {"enum": ["melee", "ranged"]}),
 	])
 	s.roots = PackedStringArray([BASE])
 	s.override_prefix = "wbt"
-	var api := DotWorkbenchApi.new()
+	var api := GSWorkbenchApi.new()
 	api.runtime.save_root = BASE
 	api.add_set(s)
 	api.set_admin_token("s3cret")
@@ -69,14 +69,14 @@ func _req(op: String, kind: String = "npc", id: String = "zombie", key: String =
 	return {"op": op, "kind": kind, "id": id, "key": key, "value": value}
 
 
-func _code(res: DotResult) -> String:
+func _code(res: GSResult) -> String:
 	return "" if res.ok else res.error.code
 
 
 func _test_read() -> void:
 	_section("list and get")
 	var api := _api()
-	var a := DotWorkbenchApi.TOKEN_ACTOR
+	var a := GSWorkbenchApi.TOKEN_ACTOR
 	var kinds := api.handle(a, {"op": "list"})
 	_check(kinds.ok and kinds.value["kinds"] == ["npc"], "list without a kind returns the kinds")
 	var ids := api.handle(a, {"op": "list", "kind": "npc"})
@@ -84,14 +84,14 @@ func _test_read() -> void:
 	var got := api.handle(a, _req("get"))
 	_check(got.ok and got.value["values"]["health"] == 50, "get returns the effective values")
 	_check(got.value["rev"] == 0 and got.value["runtime"].is_empty(), "an unedited profile has revision 0 and no runtime layer")
-	_check(_code(api.handle(a, _req("get", "npc", "nobody"))) == DotError.CODE_INVALID, "get of a missing profile is invalid")
-	_check(_code(api.handle(a, {"op": "list", "kind": "weapon"})) == DotError.CODE_INVALID, "list of an unknown kind is invalid")
+	_check(_code(api.handle(a, _req("get", "npc", "nobody"))) == GSError.CODE_INVALID, "get of a missing profile is invalid")
+	_check(_code(api.handle(a, {"op": "list", "kind": "weapon"})) == GSError.CODE_INVALID, "list of an unknown kind is invalid")
 
 
 func _test_set_reset() -> void:
 	_section("set and reset")
 	var api := _api()
-	var a := DotWorkbenchApi.TOKEN_ACTOR
+	var a := GSWorkbenchApi.TOKEN_ACTOR
 	var r := api.handle(a, _req("set", "npc", "zombie", "health", 400))
 	_check(r.ok, "set succeeds")
 	var got := api.handle(a, _req("get"))
@@ -107,7 +107,7 @@ func _test_set_reset() -> void:
 func _test_save() -> void:
 	_section("save")
 	var api := _api()
-	var a := DotWorkbenchApi.TOKEN_ACTOR
+	var a := GSWorkbenchApi.TOKEN_ACTOR
 	api.handle(a, _req("set", "npc", "zombie", "health", 321))
 	var r := api.handle(a, _req("save"))
 	_check(r.ok, "save succeeds for the token")
@@ -120,24 +120,24 @@ func _test_permission() -> void:
 	_section("permission")
 	var api := _api()
 	_check(api.handle("mod", _req("set", "npc", "zombie", "health", 5)).ok, "a mod with cvar may edit")
-	_check(_code(api.handle("mod", _req("save"))) == DotError.CODE_FORBIDDEN, "a mod without root may not save")
-	_check(_code(api.handle("stranger", _req("set", "npc", "zombie", "health", 6))) == DotError.CODE_FORBIDDEN, "a stranger may not edit")
-	_check(_code(api.handle("stranger", {"op": "list"})) == DotError.CODE_FORBIDDEN, "a stranger may not list")
+	_check(_code(api.handle("mod", _req("save"))) == GSError.CODE_FORBIDDEN, "a mod without root may not save")
+	_check(_code(api.handle("stranger", _req("set", "npc", "zombie", "health", 6))) == GSError.CODE_FORBIDDEN, "a stranger may not edit")
+	_check(_code(api.handle("stranger", {"op": "list"})) == GSError.CODE_FORBIDDEN, "a stranger may not list")
 	_check(api.handle("mod", _req("get")).value["values"]["health"] == 5, "a refused edit changed nothing")
-	_check(_code(api.authenticate("wrong")) == DotError.CODE_FORBIDDEN, "a wrong token is refused")
-	_check(_code(api.authenticate("")) == DotError.CODE_FORBIDDEN, "an empty token is refused")
-	var bare := DotWorkbenchApi.new()
-	_check(_code(bare.authenticate("anything")) == DotError.CODE_FORBIDDEN, "no configured token refuses everyone")
+	_check(_code(api.authenticate("wrong")) == GSError.CODE_FORBIDDEN, "a wrong token is refused")
+	_check(_code(api.authenticate("")) == GSError.CODE_FORBIDDEN, "an empty token is refused")
+	var bare := GSWorkbenchApi.new()
+	_check(_code(bare.authenticate("anything")) == GSError.CODE_FORBIDDEN, "no configured token refuses everyone")
 
 
 func _test_bad_input() -> void:
 	_section("bad input")
 	var api := _api()
-	var a := DotWorkbenchApi.TOKEN_ACTOR
-	_check(_code(api.handle(a, _req("set", "npc", "zombie", "health", 99999))) == DotError.CODE_INVALID, "out of range is invalid")
-	_check(_code(api.handle(a, _req("set", "npc", "zombie", "nope", 1))) == DotError.CODE_INVALID, "unknown key is invalid")
-	_check(_code(api.handle(a, _req("explode"))) == DotError.CODE_INVALID, "unknown op is invalid")
-	_check(_code(api.handle(a, {"op": "set", "kind": 5, "id": "zombie"})) == DotError.CODE_INVALID, "a non-string kind is invalid")
+	var a := GSWorkbenchApi.TOKEN_ACTOR
+	_check(_code(api.handle(a, _req("set", "npc", "zombie", "health", 99999))) == GSError.CODE_INVALID, "out of range is invalid")
+	_check(_code(api.handle(a, _req("set", "npc", "zombie", "nope", 1))) == GSError.CODE_INVALID, "unknown key is invalid")
+	_check(_code(api.handle(a, _req("explode"))) == GSError.CODE_INVALID, "unknown op is invalid")
+	_check(_code(api.handle(a, {"op": "set", "kind": 5, "id": "zombie"})) == GSError.CODE_INVALID, "a non-string kind is invalid")
 	_check(api.handle(a, _req("get")).value["rev"] == 0, "bad requests bump no revision")
 
 
@@ -147,14 +147,14 @@ func _test_json() -> void:
 	var ok: Dictionary = JSON.parse_string(api.handle_json("s3cret", '{"op":"get","kind":"npc","id":"zombie"}'))
 	_check(ok["ok"] == true and ok["value"]["id"] == "zombie", "a good token and body gives an ok reply")
 	var denied: Dictionary = JSON.parse_string(api.handle_json("bad", '{"op":"list"}'))
-	_check(denied["ok"] == false and denied["error"]["code"] == DotError.CODE_FORBIDDEN, "a bad token gives an error reply with a code")
+	_check(denied["ok"] == false and denied["error"]["code"] == GSError.CODE_FORBIDDEN, "a bad token gives an error reply with a code")
 	var junk: Dictionary = JSON.parse_string(api.handle_json("s3cret", "[1,2"))
-	_check(junk["ok"] == false and junk["error"]["code"] == DotError.CODE_INVALID, "a malformed body is invalid, not a crash")
+	_check(junk["ok"] == false and junk["error"]["code"] == GSError.CODE_INVALID, "a malformed body is invalid, not a crash")
 	var set: Dictionary = JSON.parse_string(api.handle_json("s3cret", '{"op":"set","kind":"npc","id":"ghoul","key":"mode","value":"ranged"}'))
 	_check(set["ok"] == true and set["value"]["paths"]["mode"] == "ranged", "set over JSON returns the changed row")
 
 
-func _http_call(h: DotWorkbenchHttp, method: String, path: String, token: String = "s3cret", body: String = "") -> Dictionary:
+func _http_call(h: GSWorkbenchHttp, method: String, path: String, token: String = "s3cret", body: String = "") -> Dictionary:
 	var head := "%s %s HTTP/1.1\r\nHost: x\r\nContent-Length: %d\r\n" % [method, path, body.to_utf8_buffer().size()]
 	if token != "":
 		head += "Authorization: Bearer %s\r\n" % token
@@ -186,26 +186,26 @@ func _http_call(h: DotWorkbenchHttp, method: String, path: String, token: String
 
 func _test_http() -> void:
 	_section("HTTP adapter")
-	if not DotPlatform.can_listen():
+	if not GSPlatform.can_listen():
 		_line("  skipped: this platform cannot listen on a socket (the checks below are desktop only)")
 		return
 	var api := _api()
-	var h := DotWorkbenchHttp.new(api)
+	var h := GSWorkbenchHttp.new(api)
 	var off := h.start_from_config({"enabled": false})
 	_check(off.ok and not h.server.is_listening(), "disabled by default opens nothing")
-	_check(not DotWorkbenchHttp.new(_api()).start_from_config({"enabled": true}).ok, "enabled with no token source refuses to start")
-	_check(not DotWorkbenchHttp.new(_api()).start_from_config({"enabled": true, "token_file": BASE + "/missing.token"}).ok, "a missing token file refuses to start")
-	var remote := DotWorkbenchHttp.new(_api())
-	var half_h := DotWorkbenchHttp.new(_api())
-	var nofile_h := DotWorkbenchHttp.new(_api())
-	var opt := DotWorkbenchHttp.new(_api())
+	_check(not GSWorkbenchHttp.new(_api()).start_from_config({"enabled": true}).ok, "enabled with no token source refuses to start")
+	_check(not GSWorkbenchHttp.new(_api()).start_from_config({"enabled": true, "token_file": BASE + "/missing.token"}).ok, "a missing token file refuses to start")
+	var remote := GSWorkbenchHttp.new(_api())
+	var half_h := GSWorkbenchHttp.new(_api())
+	var nofile_h := GSWorkbenchHttp.new(_api())
+	var opt := GSWorkbenchHttp.new(_api())
 	_w("workbench.token", "  s3cret\n")
 	var rr := remote.start_from_config({"enabled": true, "port": 0, "bind": "0.0.0.0", "token_file": BASE + "/workbench.token"})
 	_check(not rr.ok and not remote.server.is_listening(), "plain HTTP on a non-loopback bind is refused by default")
 	var half := half_h.start_from_config({"enabled": true, "port": 0, "token_file": BASE + "/workbench.token", "tls": {"mode": "native", "cert": BASE + "/none.crt"}})
 	_check(not half.ok, "native tls with a certificate and no key refuses to start")
 	var nofile := nofile_h.start_from_config({"enabled": true, "port": 0, "bind": "0.0.0.0", "token_file": BASE + "/workbench.token", "tls": {"mode": "native", "cert": BASE + "/none.crt", "key": BASE + "/none.key"}})
-	_check(not nofile.ok and _code(nofile) == DotError.CODE_IO, "native tls with missing files fails on the files, never falls back to plain")
+	_check(not nofile.ok and _code(nofile) == GSError.CODE_IO, "native tls with missing files fails on the files, never falls back to plain")
 	var ok := opt.start_from_config({"enabled": true, "port": 0, "bind": "127.0.0.1", "allow_plain_remote": true, "token_file": BASE + "/workbench.token"})
 	_check(ok.ok, "loopback plain still starts")
 	opt.stop()
@@ -231,7 +231,7 @@ func _test_http() -> void:
 	var env := _http_call(h, "POST", "/api", "s3cret", '{"op":"get","kind":"npc","id":"zombie"}')
 	_check(env["json"]["ok"] == true and env["json"]["value"]["id"] == "zombie", "POST /api envelope works")
 	_check(_http_call(h, "DELETE", "/api/profiles/npc/zombie/health")["status"] == 200, "DELETE key resets it")
-	api.handle(DotWorkbenchApi.TOKEN_ACTOR, _req("set", "npc", "zombie", "speed", 4.0))
+	api.handle(GSWorkbenchApi.TOKEN_ACTOR, _req("set", "npc", "zombie", "speed", 4.0))
 	_check(_http_call(h, "POST", "/api/profiles/save/npc/zombie")["json"]["ok"] == true, "POST save writes the server layer")
 	_check(_http_call(h, "DELETE", "/api/profiles/npc/zombie")["status"] == 200, "DELETE profile resets all")
 	api.token_flags = PackedStringArray(["cvar"])
@@ -265,15 +265,15 @@ func _test_http() -> void:
 
 func _test_extension() -> void:
 	_section("extension routes")
-	if not DotPlatform.can_listen():
+	if not GSPlatform.can_listen():
 		_line("  skipped: this platform cannot listen on a socket")
 		return
 	var api := _api()
-	var h := DotWorkbenchHttp.new(api)
+	var h := GSWorkbenchHttp.new(api)
 	var seen := []
-	h.mount_extension("/api/things", func(actor: Variant, req: DotHttpRequest) -> DotResult:
+	h.mount_extension("/api/things", func(actor: Variant, req: GSHttpRequest) -> GSResult:
 		seen.append([actor, req.method, req.rest])
-		return DotResult.success({"echo": req.rest.trim_prefix("/")}), "thing", PackedStringArray(["GET", "POST"]))
+		return GSResult.success({"echo": req.rest.trim_prefix("/")}), "thing", PackedStringArray(["GET", "POST"]))
 	_w("ext.token", "s3cret")
 	var res := h.start_from_config({"enabled": true, "port": 0, "token_file": BASE + "/ext.token"})
 	if not res.ok:
@@ -287,7 +287,7 @@ func _test_extension() -> void:
 	_check(api.token_flags.count("thing") == 1, "add_flag is idempotent")
 	var ok := _http_call(h, "GET", "/api/things/a")
 	_check(ok["status"] == 200 and ok["json"]["value"]["echo"] == "a", "once the token holds the flag the handler answers")
-	_check(seen.size() == 1 and seen[0][0] == DotWorkbenchApi.TOKEN_ACTOR and seen[0][1] == "GET", "the handler is given the actor and the request")
+	_check(seen.size() == 1 and seen[0][0] == GSWorkbenchApi.TOKEN_ACTOR and seen[0][1] == "GET", "the handler is given the actor and the request")
 	_check(_http_call(h, "DELETE", "/api/things/a")["status"] != 200, "a method outside the mounted list is not routed")
 	for i in 5:
 		_http_call(h, "GET", "/api/things", "bad")
@@ -299,7 +299,7 @@ func _test_extension() -> void:
 func _test_pages() -> void:
 	_section("page registry")
 	var api := _api()
-	var h := DotWorkbenchHttp.new(api)
+	var h := GSWorkbenchHttp.new(api)
 	_check(not h.register_page("Bad Id", "x", "<p>x</p>") and not h.register_page("ok", "x", ""), "a bad id or empty html is refused")
 	_check(h.register_page("tools", "Tools", "<!doctype html><title>Tools</title>") and h.register_page("secret", "Secret", "<title>S</title>", "pagesecret"), "pages register")
 	_w("pg.token", "s3cret")
@@ -321,7 +321,7 @@ func _test_pages() -> void:
 	h.stop()
 
 
-## Stands in for DotProfileEditorScreen so the binding is tested without GameSpice UI or GameSpice Menu.
+## Stands in for GSProfileEditorScreen so the binding is tested without GameSpice UI or GameSpice Menu.
 class FakeScreen extends RefCounted:
 	var save_target: Callable
 	var reset_target: Callable
@@ -338,49 +338,49 @@ class FakeScreen extends RefCounted:
 func _test_panel() -> void:
 	_section("in-game panel binding")
 	var api := _api()
-	var set: DotProfileSet = api._sets["npc"]
+	var set: GSProfileSet = api._sets["npc"]
 	var scr := FakeScreen.new()
-	var panel := DotWorkbenchPanel.new(api, DotWorkbenchApi.TOKEN_ACTOR)
+	var panel := GSWorkbenchPanel.new(api, GSWorkbenchApi.TOKEN_ACTOR)
 	panel.attach(scr)
-	_check(scr.target_label == DotWorkbenchPanel.TARGET_LABEL and scr.save_target.is_valid(), "attach sets the hooks and label")
+	_check(scr.target_label == GSWorkbenchPanel.TARGET_LABEL and scr.save_target.is_valid(), "attach sets the hooks and label")
 	_check(not scr.has_override.call(set, "zombie"), "no override before an edit")
-	var r: DotResult = scr.save_target.call(set, "zombie", {"health": 222, "speed": 7.5})
+	var r: GSResult = scr.save_target.call(set, "zombie", {"health": 222, "speed": 7.5})
 	_check(r.ok and api.runtime.revision("npc", "zombie") == 2, "Apply writes each key through the runtime (revision 2)")
-	_check(api.handle(DotWorkbenchApi.TOKEN_ACTOR, _req("get")).value["values"]["health"] == 222, "the edit is live")
+	_check(api.handle(GSWorkbenchApi.TOKEN_ACTOR, _req("get")).value["values"]["health"] == 222, "the edit is live")
 	_check(scr.has_override.call(set, "zombie"), "override reported after an edit")
-	var bad: DotResult = scr.save_target.call(set, "zombie", {"health": 300, "speed": 9999.0})
-	_check(not bad.ok and _code(bad) == DotError.CODE_INVALID, "an invalid value is refused")
-	_check(api.handle(DotWorkbenchApi.TOKEN_ACTOR, _req("get")).value["values"]["health"] == 222, "a refused Apply leaves the earlier keys unchanged")
+	var bad: GSResult = scr.save_target.call(set, "zombie", {"health": 300, "speed": 9999.0})
+	_check(not bad.ok and _code(bad) == GSError.CODE_INVALID, "an invalid value is refused")
+	_check(api.handle(GSWorkbenchApi.TOKEN_ACTOR, _req("get")).value["values"]["health"] == 222, "a refused Apply leaves the earlier keys unchanged")
 	_check(panel.save_to_server().ok and FileAccess.file_exists(BASE.path_join("server/game/mygame/npc/zombie.yml")), "save_to_server writes the server tier")
 	_check(scr.reset_target.call(set, "zombie").ok and not scr.has_override.call(set, "zombie"), "reset drops the runtime layer")
-	var plain := DotWorkbenchPanel.new(api, "nobody")
+	var plain := GSWorkbenchPanel.new(api, "nobody")
 	var scr2 := FakeScreen.new()
 	plain.attach(scr2)
-	_check(_code(scr2.save_target.call(set, "zombie", {"health": 5})) == DotError.CODE_FORBIDDEN, "an actor without the cvar flag is refused")
-	_check(_code(plain.save_to_server()) == DotError.CODE_FORBIDDEN, "an actor without root cannot save to the server")
+	_check(_code(scr2.save_target.call(set, "zombie", {"health": 5})) == GSError.CODE_FORBIDDEN, "an actor without the cvar flag is refused")
+	_check(_code(plain.save_to_server()) == GSError.CODE_FORBIDDEN, "an actor without root cannot save to the server")
 
 
 func _test_add_delete() -> void:
 	_section("profiles are added and deleted through the api and the panel")
 	var api := _api()
-	var a := DotWorkbenchApi.TOKEN_ACTOR
-	var set: DotProfileSet = api._sets["npc"]
+	var a := GSWorkbenchApi.TOKEN_ACTOR
+	var set: GSProfileSet = api._sets["npc"]
 	var r := api.handle(a, _req("add", "npc", "wraith", "", {"health": 90}))
 	_check(r.ok and api.handle(a, _req("list", "npc")).value["ids"].has("wraith"), "add through the api lists the new profile")
 	_check(api.handle(a, _req("get", "npc", "wraith")).value["values"]["health"] == 90, "and it carries the start values")
-	_check(_code(api.handle(a, _req("add", "npc", "wraith"))) == DotError.CODE_INVALID, "a taken id is refused")
+	_check(_code(api.handle(a, _req("add", "npc", "wraith"))) == GSError.CODE_INVALID, "a taken id is refused")
 	var envelope: Variant = JSON.parse_string(api.handle_json("s3cret", JSON.stringify({"op": "delete", "kind": "npc", "id": "wraith"})))
 	_check(envelope != null and envelope.get("ok", false) and not set.has_id("wraith"), "delete through the json envelope removes it")
 	_check(not api.handle(a, _req("list", "npc")).value["ids"].has("wraith"), "and it no longer lists")
 	var scr := FakeScreen.new()
-	var panel := DotWorkbenchPanel.new(api, a)
+	var panel := GSWorkbenchPanel.new(api, a)
 	panel.attach(scr)
 	_check(panel.add_profile("npc", "golem", {"health": 500}).ok and set.has_id("golem"), "the panel adds a profile")
 	_check(panel.delete_profile("npc", "golem").ok and not set.has_id("golem"), "the panel deletes it")
 	_check(panel.delete_profile("npc", "ghoul").ok and not set.list_ids().has("ghoul"), "the panel deletes a shipped profile too")
-	_check(_code(panel.delete_profile("npc", "ghoul")) == DotError.CODE_INVALID, "deleting it twice is refused")
-	var plain := DotWorkbenchPanel.new(api, "nobody")
-	_check(_code(plain.add_profile("npc", "x")) == DotError.CODE_FORBIDDEN and _code(plain.delete_profile("npc", "zombie")) == DotError.CODE_FORBIDDEN, "an actor without the cvar flag can do neither")
+	_check(_code(panel.delete_profile("npc", "ghoul")) == GSError.CODE_INVALID, "deleting it twice is refused")
+	var plain := GSWorkbenchPanel.new(api, "nobody")
+	_check(_code(plain.add_profile("npc", "x")) == GSError.CODE_FORBIDDEN and _code(plain.delete_profile("npc", "zombie")) == GSError.CODE_FORBIDDEN, "an actor without the cvar flag can do neither")
 	_check(api.handle(a, _req("get", "npc", "zombie")).ok, "the others are untouched")
 
 
@@ -388,24 +388,24 @@ func _test_schema_field() -> void:
 	_section("a schema field shows in the editor form with its range, unwired")
 	_clean()
 	_w("addons/dot-weapon/weapon/pistol.yml", "")
-	var s := DotProfileSet.create("dot-weapon", "mygame", "weapon", [
-		DotProfileSet.field("crosshair_scale", "float", 0.0, {"min": 0.0, "max": 4.0}),
+	var s := GSProfileSet.create("dot-weapon", "mygame", "weapon", [
+		GSProfileSet.field("crosshair_scale", "float", 0.0, {"min": 0.0, "max": 4.0}),
 	])
 	s.roots = PackedStringArray([BASE])
-	var api := DotWorkbenchApi.new()
+	var api := GSWorkbenchApi.new()
 	api.runtime.save_root = BASE
 	api.add_set(s)
 	api.set_admin_token("s3cret")
-	var a := DotWorkbenchApi.TOKEN_ACTOR
-	var form := DotUiForm.new()
+	var a := GSWorkbenchApi.TOKEN_ACTOR
+	var form := GSUiForm.new()
 	var built := form.build(s.schema, api.handle(a, _req("get", "weapon", "pistol")).value["values"])
 	_check(built.ok, "the form builds from the set's schema alone")
-	var row: DotFormRow = form.row("crosshair_scale")
+	var row: GSFormRow = form.row("crosshair_scale")
 	_check(row != null, "crosshair_scale has a row without any wiring")
 	_check(row != null and is_equal_approx(float(row.field["min"]), 0.0) and is_equal_approx(float(row.field["max"]), 4.0), "the row carries the range 0 to 4")
 	_check(row != null and row.field["slider"] == true and row._slider != null, "a ranged float gets a slider")
 	_check(api.handle(a, _req("set", "weapon", "pistol", "crosshair_scale", 1.5)).ok, "an in-range value is accepted")
-	_check(_code(api.handle(a, _req("set", "weapon", "pistol", "crosshair_scale", 5.0))) == DotError.CODE_INVALID, "a value above the range is refused")
+	_check(_code(api.handle(a, _req("set", "weapon", "pistol", "crosshair_scale", 5.0))) == GSError.CODE_INVALID, "a value above the range is refused")
 	_check(form.set_value("crosshair_scale", 2.0).ok and not form.set_value("crosshair_scale", 9.0).ok, "the form refuses a value outside the range")
 	form.free()
 	_check(api.handle(a, _req("get", "weapon", "pistol")).value["values"]["crosshair_scale"] == 1.5, "the refused edit left the live value")
@@ -414,38 +414,38 @@ func _test_schema_field() -> void:
 func _test_scope() -> void:
 	_section("sections follow what is loaded, each with its side")
 	_clean()
-	var api := DotWorkbenchApi.new()
-	var game := DotProfileSet.create("", "game-a", "config_world", [DotProfileSet.field("speed", "float", 1.0)])
-	var mode := DotProfileSet.create("", "game-a", "config_mode", [DotProfileSet.field("rounds", "int", 3)])
-	var other := DotProfileSet.create("", "game-b", "config_b", [DotProfileSet.field("lives", "int", 3)])
-	var untagged := DotProfileSet.create("pack-x", "", "thing", [])
+	var api := GSWorkbenchApi.new()
+	var game := GSProfileSet.create("", "game-a", "config_world", [GSProfileSet.field("speed", "float", 1.0)])
+	var mode := GSProfileSet.create("", "game-a", "config_mode", [GSProfileSet.field("rounds", "int", 3)])
+	var other := GSProfileSet.create("", "game-b", "config_b", [GSProfileSet.field("lives", "int", 3)])
+	var untagged := GSProfileSet.create("pack-x", "", "thing", [])
 	for s in [game, mode, other, untagged]:
 		s.roots = PackedStringArray([BASE])
 		api.add_set(s)
 	var mode_on := [false]
 	var b_loaded := [false]
-	DotWorkbenchScope.tag(game, {"owner": "game-a", "side": DotWorkbenchScope.SIDE_REPLICATED})
-	DotWorkbenchScope.tag(mode, {"owner": "game-a: mode", "side": DotWorkbenchScope.SIDE_SERVER, "requires": func() -> bool: return mode_on[0]})
-	DotWorkbenchScope.tag(other, {"owner": "game-b", "requires": func() -> bool: return b_loaded[0]})
+	GSWorkbenchScope.tag(game, {"owner": "game-a", "side": GSWorkbenchScope.SIDE_REPLICATED})
+	GSWorkbenchScope.tag(mode, {"owner": "game-a: mode", "side": GSWorkbenchScope.SIDE_SERVER, "requires": func() -> bool: return mode_on[0]})
+	GSWorkbenchScope.tag(other, {"owner": "game-b", "requires": func() -> bool: return b_loaded[0]})
 	var labels := {"config_world": "Game settings: world", "config_mode": "Game settings: mode", "config_b": "B settings"}
-	var kinds := func() -> Array: return DotWorkbenchScope.sections(api, labels).map(func(p: Array) -> String: return p[0])
+	var kinds := func() -> Array: return GSWorkbenchScope.sections(api, labels).map(func(p: Array) -> String: return p[0])
 	_check(kinds.call() == ["config_world", "thing"], "only game-a's own section and the untagged one show while the mode and game-b are off")
 	mode_on[0] = true
 	_check(kinds.call() == ["config_world", "config_mode", "thing"], "turning the mode on lists its section")
 	b_loaded[0] = true
-	var both := DotWorkbenchScope.sections(api, labels)
+	var both := GSWorkbenchScope.sections(api, labels)
 	_check(both.size() == 4 and both[2][1] == "B settings", "with both games loaded both games' sections show")
 	_check(both[0][1] == "Game settings: world  ·  server, replicated" and both[1][1] == "Game settings: mode  ·  server", "headings carry the side")
 	_check(both[3][1] == "Thing", "an untagged set keeps its label and is always shown")
-	_check(DotWorkbenchScope.owners(api, both) == PackedStringArray(["game-a", "game-a: mode", "game-b", "pack-x"]), "owners name each loaded game, mode and addon once")
-	DotWorkbenchScope.tag(other, {"listed": false})
-	_check(not kinds.call().has("config_b") and DotWorkbenchScope.of(other)["owner"] == "game-b", "listed false hides a set; a later tag merges over the first")
+	_check(GSWorkbenchScope.owners(api, both) == PackedStringArray(["game-a", "game-a: mode", "game-b", "pack-x"]), "owners name each loaded game, mode and addon once")
+	GSWorkbenchScope.tag(other, {"listed": false})
+	_check(not kinds.call().has("config_b") and GSWorkbenchScope.of(other)["owner"] == "game-b", "listed false hides a set; a later tag merges over the first")
 	_check(api.kinds().size() == 4, "hidden sets stay registered with the api")
 
 
-## A set grouping two packs under one kind, like GameSpice Weapon's DotWeaponProfileGroup.
-class FakeGroup extends DotProfileSet:
-	var members: Array[DotProfileSet] = []
+## A set grouping two packs under one kind, like GameSpice Weapon's GSWeaponProfileGroup.
+class FakeGroup extends GSProfileSet:
+	var members: Array[GSProfileSet] = []
 	func list_ids() -> PackedStringArray:
 		var out := PackedStringArray()
 		for m in members:
@@ -453,17 +453,17 @@ class FakeGroup extends DotProfileSet:
 		return out
 	func has_id(id: String) -> bool:
 		return _owner(id) != null
-	func load_profile(id: String) -> DotResult:
+	func load_profile(id: String) -> GSResult:
 		var m := _owner(id)
-		return m.load_profile(id) if m != null else DotResult.fail(DotError.CODE_INVALID, "no such profile")
-	func check_edit(id: String, path: String, value: Variant) -> DotResult:
+		return m.load_profile(id) if m != null else GSResult.fail(GSError.CODE_INVALID, "no such profile")
+	func check_edit(id: String, path: String, value: Variant) -> GSResult:
 		var m := _owner(id)
-		return m.check_edit(id, path, value) if m != null else DotResult.fail(DotError.CODE_INVALID, "no such profile")
+		return m.check_edit(id, path, value) if m != null else GSResult.fail(GSError.CODE_INVALID, "no such profile")
 	func set_runtime(id: String, paths: Dictionary) -> void:
 		super.set_runtime(id, paths)
 		for m in members:
 			m.clear_cache()
-	func _owner(id: String) -> DotProfileSet:
+	func _owner(id: String) -> GSProfileSet:
 		for m in members:
 			if m.has_id(id):
 				return m
@@ -476,26 +476,26 @@ func _test_views() -> void:
 	_w("addons/pack-a/gun/pistol.yml", "damage: 10\n")
 	_w("addons/pack-a/gun/rifle.yml", "damage: 30\n")
 	_w("addons/pack-b/gun/bow.yml", "damage: 25\n")
-	var schema := [DotProfileSet.field("damage", "int", 1, {"min": 0, "max": 500})]
+	var schema := [GSProfileSet.field("damage", "int", 1, {"min": 0, "max": 500})]
 	var group := FakeGroup.new()
 	group.game = "mygame"
 	group.rel_path = "gun"
 	group.schema = schema
 	for pack in ["pack-a", "pack-b"]:
-		var m := DotProfileSet.create(pack, "", "gun", schema)
+		var m := GSProfileSet.create(pack, "", "gun", schema)
 		m.roots = PackedStringArray([BASE])
 		m.runtime = group.runtime
 		group.members.append(m)
-	var api := DotWorkbenchApi.new()
+	var api := GSWorkbenchApi.new()
 	api.runtime.save_root = BASE
 	api.set_admin_token("s3cret")
-	api.add_set(DotWorkbenchScope.tag(group, {"listed": false}) as DotProfileSet)
-	var va := DotWorkbenchSetView.make(group, group.members[0], "pack-a")
-	var vb := DotWorkbenchSetView.make(group, group.members[1], "pack-b")
-	api.add_set(DotWorkbenchScope.tag(va, {"owner": "pack-a"}) as DotProfileSet)
-	api.add_set(DotWorkbenchScope.tag(vb, {"owner": "pack-b"}) as DotProfileSet)
-	var a := DotWorkbenchApi.TOKEN_ACTOR
-	var listed := DotWorkbenchScope.sections(api, {"gun@pack-a": "Guns: pack-a"})
+	api.add_set(GSWorkbenchScope.tag(group, {"listed": false}) as GSProfileSet)
+	var va := GSWorkbenchSetView.make(group, group.members[0], "pack-a")
+	var vb := GSWorkbenchSetView.make(group, group.members[1], "pack-b")
+	api.add_set(GSWorkbenchScope.tag(va, {"owner": "pack-a"}) as GSProfileSet)
+	api.add_set(GSWorkbenchScope.tag(vb, {"owner": "pack-b"}) as GSProfileSet)
+	var a := GSWorkbenchApi.TOKEN_ACTOR
+	var listed := GSWorkbenchScope.sections(api, {"gun@pack-a": "Guns: pack-a"})
 	_check(listed.size() == 2 and listed[0] == ["gun@pack-a", "Guns: pack-a"] and listed[1][0] == "gun@pack-b", "each pack gets its own section; the group is not listed")
 	_check(api.handle(a, _req("list", "gun@pack-a")).value["ids"] == ["pistol", "rifle"] and api.handle(a, _req("list", "gun@pack-b")).value["ids"] == ["bow"], "a pack's section lists that pack's profiles")
 	_check(api.kinds() == ["gun"], "kinds() leaves views out, so export and baselines see the base kind once")
@@ -504,10 +504,10 @@ func _test_views() -> void:
 	_check(api.handle(a, _req("get", "gun", "bow")).value["values"]["damage"] == 40 and api.handle(a, _req("get", "gun@pack-b", "bow")).value["values"]["damage"] == 40, "the base kind and the view both read the edit")
 	_check(api.handle(a, _req("get", "gun@pack-b", "bow")).value["rev"] == 1, "a view reports the base kind's revision")
 	var scr := FakeScreen.new()
-	var panel := DotWorkbenchPanel.new(api, a)
+	var panel := GSWorkbenchPanel.new(api, a)
 	panel.attach(scr)
 	_check(scr.save_target.call(va, "pistol", {"damage": 12}).ok and va.runtime_paths("pistol") == {"damage": 12}, "the panel applies through a view")
-	_check(_code(api.handle(a, _req("set", "gun@pack-a", "pistol", "damage", 999))) == DotError.CODE_INVALID, "a view's edit is validated like the base kind's")
+	_check(_code(api.handle(a, _req("set", "gun@pack-a", "pistol", "damage", 999))) == GSError.CODE_INVALID, "a view's edit is validated like the base kind's")
 	_check(api.baseline_value("gun", "pistol", "damage") == {"found": true, "value": 10}, "the baseline is kept under the base kind")
 	scr.kind = "gun@pack-a"
 	scr.id = "pistol"
@@ -539,16 +539,16 @@ func _rm(dir: String) -> void:
 func _test_spawn_editor() -> void:
 	_section("spawn editor writes points as a per-map override")
 	_clean()
-	var s := DotProfileSet.create("dot_spawn", "mygame", "spawn", [DotProfileSet.field("points", "dict", {})])
+	var s := GSProfileSet.create("dot_spawn", "mygame", "spawn", [GSProfileSet.field("points", "dict", {})])
 	s.roots = PackedStringArray([BASE])
 	s.override_prefix = "wbt"
-	var api := DotWorkbenchApi.new()
+	var api := GSWorkbenchApi.new()
 	api.runtime.save_root = BASE
 	api.add_set(s)
-	var ed := DotWorkbenchSpawnEditor.new()
+	var ed := GSWorkbenchSpawnEditor.new()
 	add_child(ed)
 	ed.api = api
-	ed.actor = DotWorkbenchApi.TOKEN_ACTOR
+	ed.actor = GSWorkbenchApi.TOKEN_ACTOR
 	ed.map_id = "arena_a"
 	ed.ray_fn = func(from: Vector3, dir: Vector3) -> Dictionary:
 		if dir.y >= -0.001:
@@ -559,19 +559,19 @@ func _test_spawn_editor() -> void:
 	var dir := (Vector3(10, 0, -5) - from).normalized()
 	var id := ed.click(from, dir)
 	_check(id.begins_with("auth_") and ed.points.has(id), "a click on the floor adds an authored point")
-	var pos := DotWorkbenchSpawnEditor._pos(ed.points[id])
+	var pos := GSWorkbenchSpawnEditor._pos(ed.points[id])
 	_check(pos.distance_to(Vector3(10, 0, -5)) < 0.01, "at the surface the ray hit")
 	_check(s.has_id("arena_a") and (api.handle(ed.actor, {"op": "get", "kind": "spawn", "id": "arena_a"}).value["values"]["points"] as Dictionary).has(id), "the map's spawn profile exists and holds it")
 	_check(ed.click(from, dir) == id and ed.selected == id and ed.points.size() == 2, "a click on an existing point selects it instead")
 	_check(ed.edit(id, "team", "2") and ed.edit(id, "weight", 3.0) and ed.edit(id, "yaw", 1.5), "team, weight and facing edit")
-	_check(ed.move_point(id, Vector3(4, 0, 4)) and DotWorkbenchSpawnEditor._pos(ed.points[id]).x == 4.0, "a point moves")
+	_check(ed.move_point(id, Vector3(4, 0, 4)) and GSWorkbenchSpawnEditor._pos(ed.points[id]).x == 4.0, "a point moves")
 	_check(ed.delete_point("sp_0") and not ed.points.has("sp_0"), "a map point deletes")
 	var saved: Dictionary = api.handle(ed.actor, {"op": "get", "kind": "spawn", "id": "arena_a"}).value["values"]["points"]
 	_check(saved["sp_0"].get("removed", false) == true and saved[id]["team"] == "2", "as a removed marker beside the edited authored point")
 	_check(ed.get_child_count() == 1, "one gizmo is shown per point")
 	var ok_files := FileAccess.file_exists(BASE.path_join("server/game/mygame/spawn/arena_a.yml"))
 	_check(ok_files, "the edit is saved to the server tier")
-	var plain := DotWorkbenchSpawnEditor.new()
+	var plain := GSWorkbenchSpawnEditor.new()
 	add_child(plain)
 	plain.api = api
 	plain.actor = "nobody"
@@ -584,16 +584,16 @@ func _test_spawn_editor() -> void:
 func _test_flag_placement() -> void:
 	_section("flag stands are placed per team, for any number of teams")
 	_clean()
-	var s := DotProfileSet.create("dot_spawn", "mygame", "spawn", [DotProfileSet.field("points", "dict", {})])
+	var s := GSProfileSet.create("dot_spawn", "mygame", "spawn", [GSProfileSet.field("points", "dict", {})])
 	s.roots = PackedStringArray([BASE])
 	s.override_prefix = "wbt"
-	var api := DotWorkbenchApi.new()
+	var api := GSWorkbenchApi.new()
 	api.runtime.save_root = BASE
 	api.add_set(s)
-	var ed := DotWorkbenchSpawnEditor.new()
+	var ed := GSWorkbenchSpawnEditor.new()
 	add_child(ed)
 	ed.api = api
-	ed.actor = DotWorkbenchApi.TOKEN_ACTOR
+	ed.actor = GSWorkbenchApi.TOKEN_ACTOR
 	ed.map_id = "ctf_a"
 	ed.team_count = 3
 	ed.ray_fn = func(from: Vector3, dir: Vector3) -> Dictionary:
@@ -630,7 +630,7 @@ func _test_flag_placement() -> void:
 	for i in 3:
 		ed._key(KEY_T)
 	_check(ed.points[p]["team"] == "1", "T cycles 1, 2, 3 and back for three teams")
-	var plain := DotWorkbenchSpawnEditor.new()
+	var plain := GSWorkbenchSpawnEditor.new()
 	add_child(plain)
 	plain.api = api
 	plain.actor = "nobody"
@@ -638,7 +638,7 @@ func _test_flag_placement() -> void:
 	plain.load_points([])
 	api.permit = func(_a: Variant, _f: String) -> bool: return false
 	_check(plain.add_flag(Vector3.ONE, 1) == "", "an actor without the flag places nothing")
-	_check(DotWorkbenchSpawnEditor.TEAM_COLORS.size() > 8, "every team has a colour")
+	_check(GSWorkbenchSpawnEditor.TEAM_COLORS.size() > 8, "every team has a colour")
 
 
 func _test_write_rate_limit() -> void:
@@ -648,7 +648,7 @@ func _test_write_rate_limit() -> void:
 	api.clock = func() -> float: return t[0]
 	api.write_limit = 3
 	api.write_window_sec = 10.0
-	var a := DotWorkbenchApi.TOKEN_ACTOR
+	var a := GSWorkbenchApi.TOKEN_ACTOR
 	var ok := 0
 	for i in 3:
 		ok += 1 if api.handle(a, _req("set", "npc", "zombie", "health", 100 + i)).ok else 0
@@ -663,7 +663,7 @@ func _test_write_rate_limit() -> void:
 func _test_changes() -> void:
 	_section("changes op lists session edits against the shipped values")
 	var api := _api()
-	var a := DotWorkbenchApi.TOKEN_ACTOR
+	var a := GSWorkbenchApi.TOKEN_ACTOR
 	_check(api.handle(a, {"op": "changes"}).value["profiles"].is_empty(), "no edits: empty list")
 	var _r1 := api.handle(a, _req("set", "npc", "zombie", "health", 400))
 	var _r2 := api.handle(a, _req("set", "npc", "zombie", "speed", 2.5))
@@ -675,8 +675,8 @@ func _test_changes() -> void:
 	_check(z[0]["changes"][0] == {"path": "health", "before": 50, "now": 400}, "row carries path, before and now")
 	var _r4 := api.handle(a, _req("set", "npc", "zombie", "health", 50))
 	_check(api.handle(a, {"op": "changes", "kind": "npc", "id": "zombie"}).value["profiles"].is_empty(), "set back drops out")
-	_check(api.handle("nobody", {"op": "changes"}).error.code == DotError.CODE_FORBIDDEN, "needs the read flag")
-	_check(DotWorkbenchApi.to_reply(api.handle(a, {"op": "changes"}))["ok"] == true, "wire reply is ok")
+	_check(api.handle("nobody", {"op": "changes"}).error.code == GSError.CODE_FORBIDDEN, "needs the read flag")
+	_check(GSWorkbenchApi.to_reply(api.handle(a, {"op": "changes"}))["ok"] == true, "wire reply is ok")
 
 
 func _section(title: String) -> void:
@@ -725,7 +725,7 @@ func _test_identity() -> void:
 	var table := {"t-admin": _fake("backbone:a"), "t-user": _fake("backbone:u"), "t-guest": _fake("guest:g", true),
 		"t-group": _fake("backbone:m", false, ["workbench"]), "t-old": _fake("backbone:a", false, [], 1),
 		"t-dict": {"uid": "backbone:a"}, "t-nouid": _fake("")}
-	var gate := DotWorkbenchIdentity.new()
+	var gate := GSWorkbenchIdentity.new()
 	gate.resolver = func(t: String) -> Variant: return table.get(t)
 	_check(not gate.authenticate("t-admin") is String, "with no admins configured nobody is admitted (deny by default)")
 	gate.admin_uids = PackedStringArray(["backbone:a"])
@@ -736,24 +736,24 @@ func _test_identity() -> void:
 	_check(api.handle(ok.value, _req("set", "npc", "zombie", "health", 12)).ok, "an admitted admin may edit")
 	_check(api.handle(ok.value, _req("save")).ok, "an admitted admin holds root by default")
 	_check(api.authenticate("t-group").ok, "a member of an admin group is admitted")
-	_check(_code(api.authenticate("t-user")) == DotError.CODE_FORBIDDEN, "a signed-in non-admin is refused")
-	_check(_code(api.authenticate("t-guest")) == DotError.CODE_FORBIDDEN, "a guest is refused")
-	_check(_code(api.authenticate("t-old")) == DotError.CODE_FORBIDDEN, "an expired identity is refused")
-	_check(_code(api.authenticate("t-nouid")) == DotError.CODE_FORBIDDEN, "an identity with no uid is refused")
-	_check(_code(api.authenticate("nobody")) == DotError.CODE_FORBIDDEN and _code(api.authenticate("")) == DotError.CODE_FORBIDDEN, "an unknown or empty token (anonymous) is refused")
+	_check(_code(api.authenticate("t-user")) == GSError.CODE_FORBIDDEN, "a signed-in non-admin is refused")
+	_check(_code(api.authenticate("t-guest")) == GSError.CODE_FORBIDDEN, "a guest is refused")
+	_check(_code(api.authenticate("t-old")) == GSError.CODE_FORBIDDEN, "an expired identity is refused")
+	_check(_code(api.authenticate("t-nouid")) == GSError.CODE_FORBIDDEN, "an identity with no uid is refused")
+	_check(_code(api.authenticate("nobody")) == GSError.CODE_FORBIDDEN and _code(api.authenticate("")) == GSError.CODE_FORBIDDEN, "an unknown or empty token (anonymous) is refused")
 	_check(api.authenticate("t-dict").ok, "a Dictionary identity with a uid works")
 	_check(not gate.permit("id:backbone:u", "cvar") and not gate.permit("stranger", "cvar"), "an actor the gate did not admit holds nothing")
 	gate.fallback_permit = func(uid: String, flag: String) -> bool: return uid == "backbone:a" and flag == "cvar"
-	_check(api.handle(ok.value, _req("set", "npc", "zombie", "health", 13)).ok and _code(api.handle(ok.value, _req("save"))) == DotError.CODE_FORBIDDEN, "a fallback permit decides the flags instead")
+	_check(api.handle(ok.value, _req("set", "npc", "zombie", "health", 13)).ok and _code(api.handle(ok.value, _req("save"))) == GSError.CODE_FORBIDDEN, "a fallback permit decides the flags instead")
 
 
 func _test_export() -> void:
 	_section("export changes as defaults, and import")
 	var api := _api()
-	var a := DotWorkbenchApi.TOKEN_ACTOR
-	var ex := DotWorkbenchExport.new(api)
+	var a := GSWorkbenchApi.TOKEN_ACTOR
+	var ex := GSWorkbenchExport.new(api)
 	ex.root = OUT
-	_check(ex.export_changes("t0").error.code == DotError.CODE_STATE, "nothing edited: no export")
+	_check(ex.export_changes("t0").error.code == GSError.CODE_STATE, "nothing edited: no export")
 	var _r1 := api.handle(a, _req("set", "npc", "zombie", "health", 400))
 	var _r2 := api.handle(a, _req("set", "npc", "zombie", "speed", 2.5))
 	var _r3 := api.handle(a, _req("set", "npc", "ghoul", "mode", "ranged"))
@@ -771,21 +771,21 @@ func _test_export() -> void:
 	_check(bundle.contains("# ---- file: cfg/game/mygame/npc/zombie.yml"), "the clipboard bundle names each file")
 	# a fresh api (a second machine) takes the diff back
 	var api2 := _api()
-	var ex2 := DotWorkbenchExport.new(api2)
+	var ex2 := GSWorkbenchExport.new(api2)
 	var imp := ex2.import_source(a, bundle)
 	_check(imp.ok and imp.value["applied"] == 2, "import of the bundle applies both keys")
 	_check(api2.handle(a, _req("get", "npc", "zombie")).value["runtime"] == {"health": 400}, "import lands in the runtime layer")
 	var api3 := _api()
-	var imp2 := DotWorkbenchExport.new(api3).import_source(a, OUT.path_join("t1.zip"))
+	var imp2 := GSWorkbenchExport.new(api3).import_source(a, OUT.path_join("t1.zip"))
 	_check(imp2.ok and imp2.value["applied"] == 2, "import of the zip works")
 	var api4 := _api()
-	var imp3 := DotWorkbenchExport.new(api4).import_source(a, OUT.path_join("t1"))
+	var imp3 := GSWorkbenchExport.new(api4).import_source(a, OUT.path_join("t1"))
 	_check(imp3.ok and imp3.value["applied"] == 2, "import of the folder works")
-	var bad := DotWorkbenchExport.new(_api()).import_files(a, {"cfg/game/mygame/npc/zombie.yml": "health: 99999\n", "cfg/addons/other/npc/x.yml": "health: 1\n"})
+	var bad := GSWorkbenchExport.new(_api()).import_files(a, {"cfg/game/mygame/npc/zombie.yml": "health: 99999\n", "cfg/addons/other/npc/x.yml": "health: 1\n"})
 	_check(bad.ok and bad.value["applied"] == 0 and bad.value["skipped"].size() == 2, "out-of-range values and foreign files are skipped, not applied")
 	var api5 := _api()
 	api5.permit = Callable()
-	var denied := DotWorkbenchExport.new(api5).import_files("nobody", {"cfg/game/mygame/npc/zombie.yml": "health: 5\n"})
-	_check(not denied.ok and denied.error.code == DotError.CODE_FORBIDDEN, "import needs the edit permission")
+	var denied := GSWorkbenchExport.new(api5).import_files("nobody", {"cfg/game/mygame/npc/zombie.yml": "health: 5\n"})
+	_check(not denied.ok and denied.error.code == GSError.CODE_FORBIDDEN, "import needs the edit permission")
 	ex.cvars_provider = func() -> Dictionary: return {"fc_scorelimit": 30}
 	_check(ex.collect().get("game-cvars.yml", "") == "cvars:\n  fc_scorelimit: 30\n", "changed cvars come out as a game.yml block")

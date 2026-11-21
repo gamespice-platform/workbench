@@ -1,21 +1,21 @@
-class_name DotWorkbenchPanel
+class_name GSWorkbenchPanel
 extends RefCounted
 
-## Binds an in-game profile editor screen (GameSpice Menu's DotProfileEditorScreen, duck-typed) to a [DotWorkbenchApi].
+## Binds an in-game profile editor screen (GameSpice Menu's GSProfileEditorScreen, duck-typed) to a [GSWorkbenchApi].
 ## Edits take the HTTP page's permission, validation and audit path.
-## Usage: [code]DotWorkbenchPanel.new(api, admin_uid).attach(editor_screen)[/code], after add_set on the screen.
+## Usage: [code]GSWorkbenchPanel.new(api, admin_uid).attach(editor_screen)[/code], after add_set on the screen.
 
 signal status(text: String, bad: bool)
 
 const TARGET_LABEL := "Server runtime layer (live, replicated)"
 
-var api: DotWorkbenchApi
+var api: GSWorkbenchApi
 ## Who the edits are made as; checked by the api's permit, like a console command.
 var actor: Variant
 var screen: Object = null
 
 
-func _init(p_api: DotWorkbenchApi, p_actor: Variant) -> void:
+func _init(p_api: GSWorkbenchApi, p_actor: Variant) -> void:
 	api = p_api
 	actor = p_actor
 
@@ -30,33 +30,33 @@ func attach(p_screen: Object) -> void:
 
 
 ## Writes the runtime layer of the open profile to the server tier (cfg/server). Needs the save flag.
-func save_to_server() -> DotResult:
+func save_to_server() -> GSResult:
 	if screen == null:
-		return DotResult.fail(DotError.CODE_STATE, "no screen attached")
+		return GSResult.fail(GSError.CODE_STATE, "no screen attached")
 	var kind: String = screen.call("current_kind")
 	var id: String = screen.call("current_id")
 	if kind.is_empty():
-		return DotResult.fail(DotError.CODE_STATE, "no profile is open")
+		return GSResult.fail(GSError.CODE_STATE, "no profile is open")
 	var res := api.handle(actor, {"op": "save", "kind": kind, "id": id})
 	status.emit("Saved to the server tier" if res.ok else res.error.message, not res.ok)
 	return res
 
 
 ## Makes a new profile [param id] of [param kind], starting from [param start] (`{path: value}`). Needs the cvar flag.
-func add_profile(kind: String, id: String, start: Dictionary = {}) -> DotResult:
+func add_profile(kind: String, id: String, start: Dictionary = {}) -> GSResult:
 	var res := api.handle(actor, {"op": "add", "kind": kind, "id": id, "value": start})
 	status.emit("Added %s/%s" % [kind, id] if res.ok else res.error.message, not res.ok)
 	return res
 
 
 ## Deletes profile [param id] of [param kind]: its server-tier file goes, and a shipped one is hidden. Needs the cvar flag.
-func delete_profile(kind: String, id: String) -> DotResult:
+func delete_profile(kind: String, id: String) -> GSResult:
 	var res := api.handle(actor, {"op": "delete", "kind": kind, "id": id})
 	status.emit("Deleted %s/%s" % [kind, id] if res.ok else res.error.message, not res.ok)
 	return res
 
 
-func _save_changes(set: DotProfileSet, id: String, changes: Dictionary) -> DotResult:
+func _save_changes(set: GSProfileSet, id: String, changes: Dictionary) -> GSResult:
 	var before := set.runtime_paths(id)
 	var done: Array = []
 	for key in changes:
@@ -71,12 +71,12 @@ func _save_changes(set: DotProfileSet, id: String, changes: Dictionary) -> DotRe
 			return res
 		done.append(key)
 	status.emit("Applied live", false)
-	return DotResult.success(changes)
+	return GSResult.success(changes)
 
 
-func _reset(set: DotProfileSet, id: String) -> DotResult:
+func _reset(set: GSProfileSet, id: String) -> GSResult:
 	return api.handle(actor, {"op": "reset", "kind": set.rel_path, "id": id})
 
 
-func _has_override(set: DotProfileSet, id: String) -> bool:
+func _has_override(set: GSProfileSet, id: String) -> bool:
 	return not set.runtime_paths(id).is_empty()

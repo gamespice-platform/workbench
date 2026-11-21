@@ -11,9 +11,9 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	var s := DotProfileSet.create("dot_spawn", "demo", "spawn", [DotProfileSet.field("points", "dict", {})])
+	var s := GSProfileSet.create("dot_spawn", "demo", "spawn", [GSProfileSet.field("points", "dict", {})])
 	s.roots = PackedStringArray([BASE])
-	var api := DotWorkbenchApi.new()
+	var api := GSWorkbenchApi.new()
 	api.runtime.save_root = BASE
 	api.add_set(s)
 	var world := Node3D.new()
@@ -30,10 +30,10 @@ func _run() -> void:
 	var light := DirectionalLight3D.new()
 	light.rotation_degrees = Vector3(-60, 30, 0)
 	world.add_child(light)
-	var ed := DotWorkbenchSpawnEditor.new()
+	var ed := GSWorkbenchSpawnEditor.new()
 	world.add_child(ed)
 	ed.api = api
-	ed.actor = DotWorkbenchApi.TOKEN_ACTOR
+	ed.actor = GSWorkbenchApi.TOKEN_ACTOR
 	ed.map_id = "demo_map"
 	ed.camera = cam
 	ed.load_points([])

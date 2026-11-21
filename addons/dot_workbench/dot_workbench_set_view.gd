@@ -1,24 +1,24 @@
-class_name DotWorkbenchSetView
-extends DotProfileSet
+class_name GSWorkbenchSetView
+extends GSProfileSet
 
 ## A second heading over part of a registered set: the ids of [member inner], edited as [member base_kind].
 ## For a set that groups several sources under one kind (GameSpice Weapon's weapon group, one member per pack): register the group
 ## (scoped `listed: false`) and one view per member, so the overlay lists each pack's profiles under its own heading.
-## [DotWorkbenchApi] keeps a view out of the runtime and turns its kind back into [member base_kind] for every edit.
+## [GSWorkbenchApi] keeps a view out of the runtime and turns its kind back into [member base_kind] for every edit.
 
 const SEP := "@"
 
 ## The kind the runtime knows (the group's `rel_path`).
 var base_kind := ""
 ## The set that holds the profiles shown here (a group member).
-var inner: DotProfileSet = null
+var inner: GSProfileSet = null
 ## The registered set behind [member base_kind] (the group); its runtime layer is the one edited.
-var base: DotProfileSet = null
+var base: GSProfileSet = null
 
 
 ## A view named `<base kind>@<part>` over [param p_inner], edited through [param p_base].
-static func make(p_base: DotProfileSet, p_inner: DotProfileSet, part: String) -> DotWorkbenchSetView:
-	var v := DotWorkbenchSetView.new()
+static func make(p_base: GSProfileSet, p_inner: GSProfileSet, part: String) -> GSWorkbenchSetView:
+	var v := GSWorkbenchSetView.new()
 	v.base = p_base
 	v.inner = p_inner
 	v.base_kind = p_base.rel_path
@@ -45,11 +45,11 @@ func has_id(id: String) -> bool:
 	return inner.has_id(id)
 
 
-func load_profile(id: String) -> DotResult:
+func load_profile(id: String) -> GSResult:
 	return inner.load_profile(id)
 
 
-func check_edit(id: String, path: String, value: Variant) -> DotResult:
+func check_edit(id: String, path: String, value: Variant) -> GSResult:
 	return inner.check_edit(id, path, value)
 
 

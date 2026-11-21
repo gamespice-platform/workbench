@@ -1,7 +1,7 @@
-class_name DotWorkbenchStyle
+class_name GSWorkbenchStyle
 extends RefCounted
 
-## The workbench's slick look: a deeper palette, softer corners and pill controls over GameSpice UI's [DotFormTokens].
+## The workbench's slick look: a deeper palette, softer corners and pill controls over GameSpice UI's [GSFormTokens].
 ## Pure styling, no behaviour; a game menu (the Playlot spawn menu) can call [method apply] to share the language.
 
 const BG := Color(0.043, 0.050, 0.075)
@@ -21,7 +21,7 @@ const RADIUS := 14
 const CARD_RADIUS := 18
 
 
-## Re-colours [param t] (a DotFormTokens, dark) in place and returns it.
+## Re-colours [param t] (a GSFormTokens, dark) in place and returns it.
 static func apply(t: Object) -> Object:
 	t.set("bg", BG)
 	t.set("card", CARD)
