@@ -4,8 +4,8 @@ extends PanelContainer
 ## The in-game workbench window: a title bar over GameSpice Menu's profile editor, bound to a [GSWorkbenchApi].
 ## GameSpice UI and GameSpice Menu are loaded by path, so a build without them gets null from [method create].
 
-const EDITOR_SCRIPT := "res://addons/dot_menu/ui/dot_profile_editor_screen.gd"
-const TOKENS_SCRIPT := "res://addons/dot_ui/form/dot_form_tokens.gd"
+const EDITOR_SCRIPT := "res://addons/gs_menu/ui/gs_profile_editor_screen.gd"
+const TOKENS_SCRIPT := "res://addons/gs_ui/form/gs_form_tokens.gd"
 
 signal closed
 

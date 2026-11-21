@@ -15,7 +15,7 @@ var _section_count := 0
 
 func _ready() -> void:
 	GSLog.set_level(GSLog.Level.FATAL)
-	_line("dot-workbench self-test")
+	_line("gs-workbench self-test")
 	_clean()
 	_test_read()
 	_test_set_reset()
@@ -48,9 +48,9 @@ func _ready() -> void:
 
 func _api() -> GSWorkbenchApi:
 	_clean()
-	_w("addons/dot-npc/npc/zombie.yml", "health: 50\nspeed: 2.5\n")
-	_w("addons/dot-npc/npc/ghoul.yml", "health: 20\n")
-	var s := GSProfileSet.create("dot-npc", "mygame", "npc", [
+	_w("addons/gs-npc/npc/zombie.yml", "health: 50\nspeed: 2.5\n")
+	_w("addons/gs-npc/npc/ghoul.yml", "health: 20\n")
+	var s := GSProfileSet.create("gs-npc", "mygame", "npc", [
 		GSProfileSet.field("health", "int", 100, {"min": 1, "max": 1000}),
 		GSProfileSet.field("speed", "float", 3.0, {"min": 0.0, "max": 50.0}),
 		GSProfileSet.field("mode", "string", "melee", {"enum": ["melee", "ranged"]}),
@@ -387,8 +387,8 @@ func _test_add_delete() -> void:
 func _test_schema_field() -> void:
 	_section("a schema field shows in the editor form with its range, unwired")
 	_clean()
-	_w("addons/dot-weapon/weapon/pistol.yml", "")
-	var s := GSProfileSet.create("dot-weapon", "mygame", "weapon", [
+	_w("addons/gs-weapon/weapon/pistol.yml", "")
+	var s := GSProfileSet.create("gs-weapon", "mygame", "weapon", [
 		GSProfileSet.field("crosshair_scale", "float", 0.0, {"min": 0.0, "max": 4.0}),
 	])
 	s.roots = PackedStringArray([BASE])
@@ -539,7 +539,7 @@ func _rm(dir: String) -> void:
 func _test_spawn_editor() -> void:
 	_section("spawn editor writes points as a per-map override")
 	_clean()
-	var s := GSProfileSet.create("dot_spawn", "mygame", "spawn", [GSProfileSet.field("points", "dict", {})])
+	var s := GSProfileSet.create("gs_spawn", "mygame", "spawn", [GSProfileSet.field("points", "dict", {})])
 	s.roots = PackedStringArray([BASE])
 	s.override_prefix = "wbt"
 	var api := GSWorkbenchApi.new()
@@ -584,7 +584,7 @@ func _test_spawn_editor() -> void:
 func _test_flag_placement() -> void:
 	_section("flag stands are placed per team, for any number of teams")
 	_clean()
-	var s := GSProfileSet.create("dot_spawn", "mygame", "spawn", [GSProfileSet.field("points", "dict", {})])
+	var s := GSProfileSet.create("gs_spawn", "mygame", "spawn", [GSProfileSet.field("points", "dict", {})])
 	s.roots = PackedStringArray([BASE])
 	s.override_prefix = "wbt"
 	var api := GSWorkbenchApi.new()

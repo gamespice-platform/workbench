@@ -29,7 +29,7 @@ func _ready() -> void:
 
 
 func _run() -> void:
-	print("dot-workbench publish self-test")
+	print("gs-workbench publish self-test")
 	_test_token()
 	_test_query()
 	_test_file()

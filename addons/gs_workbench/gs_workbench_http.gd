@@ -4,7 +4,7 @@ extends RefCounted
 ## Mounts a GSWorkbenchApi on a GSHttpServer: bearer-token JSON routes under /api and the static page at /. Off by default.
 
 const CHANNEL := "workbench"
-const PAGE := "res://addons/dot_workbench/web/index.html"
+const PAGE := "res://addons/gs_workbench/web/index.html"
 
 var api: GSWorkbenchApi
 var server := GSHttpServer.new()

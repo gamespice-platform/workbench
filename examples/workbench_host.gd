@@ -10,11 +10,11 @@ var _http: GSWorkbenchHttp
 
 func _ready() -> void:
 	GSLog.set_level(GSLog.Level.WARN)
-	DirAccess.make_dir_recursive_absolute(BASE.path_join("addons/dot-npc/npc"))
-	var f := FileAccess.open(BASE.path_join("addons/dot-npc/npc/zombie.yml"), FileAccess.WRITE)
+	DirAccess.make_dir_recursive_absolute(BASE.path_join("addons/gs-npc/npc"))
+	var f := FileAccess.open(BASE.path_join("addons/gs-npc/npc/zombie.yml"), FileAccess.WRITE)
 	f.store_string("health: 50\nspeed: 2.5\n")
 	f.close()
-	var s := GSProfileSet.create("dot-npc", "mygame", "npc", [
+	var s := GSProfileSet.create("gs-npc", "mygame", "npc", [
 		GSProfileSet.field("health", "int", 100, {"min": 1, "max": 1000}),
 		GSProfileSet.field("speed", "float", 3.0, {"min": 0.0, "max": 50.0}),
 		GSProfileSet.field("mode", "string", "melee", {"enum": ["melee", "ranged"]}),

@@ -270,7 +270,7 @@ static func _scalar(v: Variant) -> Variant:
 
 
 static func _readme(names: Array) -> String:
-	var out := "dot-workbench export: only values that differ from the shipped defaults.\n\n"
+	var out := "gs-workbench export: only values that differ from the shipped defaults.\n\n"
 	out += "Send this folder (or the zip) back. To adopt it as new defaults, copy the cfg/ folder over the\nrepository's cfg/ and commit it.\n\nFiles:\n"
 	var sorted := names.duplicate()
 	sorted.sort()

@@ -5,7 +5,7 @@ extends RefCounted
 ## The scope rides on the set as metadata, so a host that only passes `(set, label)` keeps working; an untagged set is always shown.
 ## Use: [code]GSWorkbenchScope.tag(set, {"owner": "my-game", "side": GSWorkbenchScope.SIDE_SERVER, "requires": func(): return mode_on})[/code].
 
-const META := &"dot_workbench_scope"
+const META := &"gs_workbench_scope"
 ## Lives on the server only; a client edits it through the server.
 const SIDE_SERVER := "server"
 ## Server-owned and sent to every client (clients predict with it).

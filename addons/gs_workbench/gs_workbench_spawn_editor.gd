@@ -3,7 +3,7 @@ extends Node3D
 
 ## Point-and-click spawn authoring: aim, click to add, select, move, turn, edit, delete. Every edit goes through [GSWorkbenchApi] into the `spawn` profile of [member map_id] and is saved at once.
 ##
-## Duck-typed to dot-spawn: points are plain Dictionaries in the override entry format (pos, yaw, team, kind, enabled, weight, tags).
+## Duck-typed to gs-spawn: points are plain Dictionaries in the override entry format (pos, yaw, team, kind, enabled, weight, tags).
 
 const KIND := "spawn"
 const PICK_RADIUS := 1.2

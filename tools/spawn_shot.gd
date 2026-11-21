@@ -11,7 +11,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	var s := GSProfileSet.create("dot_spawn", "demo", "spawn", [GSProfileSet.field("points", "dict", {})])
+	var s := GSProfileSet.create("gs_spawn", "demo", "spawn", [GSProfileSet.field("points", "dict", {})])
 	s.roots = PackedStringArray([BASE])
 	var api := GSWorkbenchApi.new()
 	api.runtime.save_root = BASE

@@ -11,12 +11,12 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	DirAccess.make_dir_recursive_absolute(BASE.path_join("addons/dot-npc/npc"))
+	DirAccess.make_dir_recursive_absolute(BASE.path_join("addons/gs-npc/npc"))
 	for n in ["zombie", "ghoul"]:
-		var f := FileAccess.open(BASE.path_join("addons/dot-npc/npc/%s.yml" % n), FileAccess.WRITE)
+		var f := FileAccess.open(BASE.path_join("addons/gs-npc/npc/%s.yml" % n), FileAccess.WRITE)
 		f.store_string("health: 50\nspeed: 2.5\n")
 		f.close()
-	var s := GSProfileSet.create("dot-npc", "mygame", "npc", [
+	var s := GSProfileSet.create("gs-npc", "mygame", "npc", [
 		GSProfileSet.field("health", "int", 100, {"min": 1, "max": 1000}),
 		GSProfileSet.field("speed", "float", 3.0, {"min": 0.0, "max": 50.0}),
 		GSProfileSet.field("mode", "string", "melee", {"enum": ["melee", "ranged"]}),
