@@ -47,9 +47,9 @@ workbench:
   port: 8790
   tls:
     mode: proxy           # proxy (default): plain HTTP on loopback behind nginx/caddy; native: terminate here
-    cert: /etc/dot/workbench.crt   # native only: paths, never contents
-    key: /etc/dot/workbench.key
-  token_file: /etc/dot/workbench.token   # secrets are file paths, never values in yml
+    cert: /etc/gs/workbench.crt   # native only: paths, never contents
+    key: /etc/gs/workbench.key
+  token_file: /etc/gs/workbench.token   # secrets are file paths, never values in yml
   max_failures: 5         # failed tokens per address inside window_sec before a lockout (0 disables)
   window_sec: 60
   lockout_sec: 300        # 429 with Retry-After for this long

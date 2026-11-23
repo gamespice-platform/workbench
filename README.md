@@ -45,7 +45,7 @@ workbench:
   enabled: true
   bind: 127.0.0.1
   port: 8790
-  token_file: /etc/dot/workbench.token
+  token_file: /etc/gs/workbench.token
 ```
 
 The host creates `GSWorkbenchHttp.new(api)`, calls `start_from_config(GSWorkbenchHttp.read_config())` and calls `poll()` from `_process`. All routes except the page need `Authorization: Bearer <token>`.
