@@ -2,6 +2,8 @@
 
 Live-edit profiles on a running game. A JSON API over `GSProfileRuntime`, an in-game window, and an off-by-default loopback web page. Tune values while playing, then export only what you changed.
 
+This is a GameSpice addon, MIT licensed and built with Claude Code, with a headless test in `examples/workbench_selftest.tscn`. The games in [Zee's Games](https://zeesgames.com) are built on GameSpice addons and run on live servers, and each of them carries this workbench for tuning profiles. Bug reports go to the [issue tracker](https://github.com/gamespice-platform/workbench/issues).
+
 ## What it looks like
 
 The in-game window: pick a profile on the left, drag a value, and the change is live at once. Rows you changed are marked, **Apply** and **Revert** wait at the bottom, and **Save to server** writes the open profile.
@@ -90,8 +92,27 @@ Import the project once, then run `examples/workbench_selftest.tscn` headless wi
 
 The models, textures, animations, sounds and maps of the packs this tool tunes, and the window itself, are improved automatically and recursively by AI agents. [Nightly](https://github.com/gamemann/nightly) keeps a board of improvement items. Agents pick up an item, make the change, render fresh frames and check them with a visual judge. Judge findings become new items, and the loop repeats until the result is production quality. Improvements ship as new pack versions, and the screenshots in this README are re-shot each time. Anything rough you meet is worth an [issue](https://github.com/gamespice-platform/workbench/issues).
 
-## Status and licence
+## Used by
 
-Part of the [**GameSpice**](https://gamespice.net) platform: a family of Godot addons. Written with Claude Code and maintained by `gamemann`. Every addon has headless tests, but little of this has been played by real users yet, so expect rough edges and please [open an issue](https://github.com/gamespice-platform/workbench/issues) when you hit one.
+All of these games from Zee's Games vendor this addon:
+
+- [Fatal Contact](https://zeesgames.com/fatal-contact)
+- [Airdrift](https://zeesgames.com/airdrift)
+- [Playlot](https://zeesgames.com/playlot)
+- [Hungario](https://zeesgames.com/hungario)
+- [Buses From Hell](https://zeesgames.com/buses-from-hell)
+- [Smash Copter](https://zeesgames.com/smash-copter)
+- [Zombie Zone](https://zeesgames.com/zombie-zone)
+- [Hide n Seek](https://zeesgames.com/hide-n-seek)
+- [Prop Hunt](https://zeesgames.com/prop-hunt)
+- [Murder Mystery](https://zeesgames.com/murder-mystery)
+- [Deathrun](https://zeesgames.com/deathrun)
+- [Wipeout](https://zeesgames.com/wipeout)
+- [Dangerous Delivery](https://zeesgames.com/dangerous-delivery)
+- [Look At Me](https://zeesgames.com/look-at-me)
+
+The whole collection is at [zeesgames.com](https://zeesgames.com).
+
+## Licence
 
 MIT licence, see [LICENSE](LICENSE). The only closed part of the [**GameSpice**](https://gamespice.net) platform is the web back end; you can use your own instead of GameSpice's.
